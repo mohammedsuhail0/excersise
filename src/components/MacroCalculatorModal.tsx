@@ -23,7 +23,7 @@ export const MacroCalculatorModal: React.FC<MacroCalculatorModalProps> = ({
   const [age, setAge] = useState<number>(22);
   const [gender, setGender] = useState<'male' | 'female'>('male');
   const [activity, setActivity] = useState<ActivityLevel>('moderate');
-  const [goal, setGoal] = useState<Goal>('bulk');
+  const [goal, setGoal] = useState<Goal>('cut');
 
   const [aiMealPlan, setAiMealPlan] = useState<string>('');
   const [isGeneratingPlan, setIsGeneratingPlan] = useState<boolean>(false);
@@ -57,6 +57,8 @@ export const MacroCalculatorModal: React.FC<MacroCalculatorModalProps> = ({
   const fatGrams = Math.round((targetCalories * 0.25) / 9);
   const carbGrams = Math.round((targetCalories - proteinGrams * 4 - fatGrams * 9) / 4);
 
+  const goalLabel = goal === 'cut' ? 'FAT LOSS DEFICIT' : goal === 'bulk' ? 'LEAN MUSCLE BULK' : 'MAINTENANCE';
+
   const handleGenerateAIMealPlan = async () => {
     soundEngine.playTick();
     setIsGeneratingPlan(true);
@@ -65,7 +67,7 @@ export const MacroCalculatorModal: React.FC<MacroCalculatorModalProps> = ({
     const prompt = `Generate a high-protein 1-day calisthenics meal plan for a ${weightKg}kg ${gender} athlete:
 - Daily Target: ${targetCalories} kcal
 - Protein: ${proteinGrams}g | Carbs: ${carbGrams}g | Fats: ${fatGrams}g
-- Goal: ${goal.toUpperCase()}
+- Goal: ${goalLabel}
 
 Format with 4 meals (Breakfast, Lunch, Pre-Workout Snack, Dinner). Keep it concise, high-protein, delicious, and easy to prepare!`;
 

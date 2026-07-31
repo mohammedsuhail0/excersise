@@ -97,7 +97,7 @@ export const ROUTINES_MAP: Record<VibeStage, WorkoutRoutine> = {
 
 export type LLMProvider = 'nvidia' | 'groq' | 'gemini';
 
-// 100% DIRECT LIVE NVIDIA NIM LLM ENGINE (NO OFFLINE FALLBACKS AT ALL)
+// 100% DIRECT LIVE NVIDIA NIM LLM ENGINE
 export async function callMultiProviderLLMCoachAPI(
   prompt: string,
   userContext: any,
@@ -106,10 +106,10 @@ export async function callMultiProviderLLMCoachAPI(
 ): Promise<string> {
   const lowerPrompt = prompt.toLowerCase();
 
-  // 1. URGENT MEDICAL EMERGENCY & INJURY SAFETY CHECK
+  // 1. SPECIFIC MEDICAL EMERGENCY & INJURY SAFETY CHECK (EXCLUDES FITNESS "CUT" DIET GOAL)
   const medicalEmergencyKeywords = [
-    'bleeding', 'bleed', 'blood', 'cut', 'wound', 'chest pain', 'dizziness', 
-    'dizzy', 'fainted', 'faint', 'broken', 'fracture', 'dislocated', 'torn', 'severe pain'
+    'bleeding', 'bleed', 'blood wound', 'deep cut', 'open wound', 'chest pain', 
+    'dizziness', 'dizzy', 'fainted', 'faint', 'broken bone', 'fracture', 'dislocated', 'torn muscle', 'severe pain'
   ];
 
   if (medicalEmergencyKeywords.some((word) => lowerPrompt.includes(word))) {
@@ -124,17 +124,13 @@ If you are bleeding, cut, or severely injured, do NOT do any pushups or workouts
 
 CRITICAL INSTRUCTIONS:
 - Give a direct, highly customized answer specifically addressing their question. Use bullet points and emojis. Keep under 120 words!
-- If the user asks for workouts for abs, arms, chest, legs, etc., give a specific calisthenics routine for that exact muscle group.`;
+- If the user asks for a meal plan, format 4 delicious high-protein meals (Breakfast, Lunch, Snack, Dinner) matching their calorie and macro goals!`;
 
   const apiKey =
     customApiKey ||
     localStorage.getItem('aurafit_nvidia_api_key') ||
     import.meta.env.VITE_NVIDIA_API_KEY ||
     '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';
-
-  if (!apiKey) {
-    return `⚠️ NVIDIA API Key Missing! Please set VITE_NVIDIA_API_KEY in your .env file to enable live Llama 3.1 70B AI responses.`;
-  }
 
   const endpointsToTry = [
     '/api/nvidia/v1/chat/completions',
@@ -165,7 +161,7 @@ CRITICAL INSTRUCTIONS:
               { role: 'user', content: prompt },
             ],
             temperature: 0.7,
-            max_tokens: 250,
+            max_tokens: 300,
           }),
         });
 
@@ -188,6 +184,5 @@ CRITICAL INSTRUCTIONS:
     }
   }
 
-  // NO OFFLINE FALLBACK - RETURN EXACT NVIDIA API ERROR
   return `⚠️ Direct NVIDIA NIM LLM Connection Error: ${lastError || 'Failed to reach integrate.api.nvidia.com'}. Please check your internet connection or API key.`;
 }
