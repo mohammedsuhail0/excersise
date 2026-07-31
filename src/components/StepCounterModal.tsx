@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Footprints, Flame, MapPin, Clock, Award, X, Plus, Play, Pause, RotateCcw, Smartphone, Activity } from 'lucide-react';
+import { Footprints, Flame, MapPin, Clock, Award, X, Plus, Play, Pause, RotateCcw, Smartphone, Activity, Zap } from 'lucide-react';
 import { soundEngine } from '../services/soundEngine';
 
 interface StepCounterModalProps {
@@ -18,74 +18,73 @@ export const StepCounterModal: React.FC<StepCounterModalProps> = ({
   onUpdateSteps,
 }) => {
   const [isLiveTracking, setIsLiveTracking] = useState(false);
-  
-  // Cadence & Rhythmic Step Filter State Refs
-  const lastStepTimeRef = useRef<number>(0);
-  const consecutiveRhythmicStepsRef = useRef<number>(0);
-  const lastAccelMagnitudeRef = useRef<number>(9.8);
+  const [motionIntensity, setMotionIntensity] = useState<number>(0);
+  const [sensorStatus, setSensorStatus] = useState<string>('Ready to Calibrate');
 
-  // Calculate stats based on steps
-  const distanceKm = (currentSteps * 0.00075).toFixed(2); // Avg step ~ 0.75m
-  const caloriesBurned = Math.round(currentSteps * 0.04); // Avg ~ 0.04 kcal per step
-  const activeMins = Math.round(currentSteps / 100); // Avg ~ 100 steps/min
+  // Motion Detection State Refs
+  const lastStepTimeRef = useRef<number>(0);
+  const lastMagRef = useRef<number>(9.8);
+
+  // Stats calculation
+  const distanceKm = (currentSteps * 0.00075).toFixed(2);
+  const caloriesBurned = Math.round(currentSteps * 0.04);
+  const activeMins = Math.round(currentSteps / 100);
   const progressPercent = Math.min(100, Math.round((currentSteps / stepGoal) * 100));
 
-  // SMART RHYTHMIC CADENCE PEDOMETER FILTER (REJECTS RANDOM PHONE SHAKES)
+  // HIGH-SENSITIVITY HUMAN WALKING & RUNNING PEDOMETER ALGORITHM
   useEffect(() => {
     const handleDeviceMotion = (event: DeviceMotionEvent) => {
       if (!isLiveTracking) return;
 
-      const acc = event.acceleration || event.accelerationIncludingGravity;
+      const acc = event.accelerationIncludingGravity || event.acceleration;
       if (!acc || acc.x === null || acc.y === null || acc.z === null) return;
 
-      // 1. Calculate magnitude of acceleration
+      // 1. Calculate total acceleration vector magnitude
       const mag = Math.sqrt(acc.x * acc.x + acc.y * acc.y + acc.z * acc.z);
       const now = Date.now();
       const timeDelta = now - lastStepTimeRef.current;
 
-      // 2. Low-Pass Filter: Calculate peak acceleration change delta
-      const magDelta = Math.abs(mag - lastAccelMagnitudeRef.current);
-      lastAccelMagnitudeRef.current = mag;
+      // 2. Dynamic Motion Delta (difference from previous frame)
+      const delta = Math.abs(mag - lastMagRef.current);
+      lastMagRef.current = mag;
 
-      // 3. Human Walking Stride Cadence Rules:
-      // - Walking step impact threshold: mag > 11.5 m/s² and delta > 2.8 m/s²
-      // - Human walking stride pace is between 380ms (fast sprint) and 850ms (slow walk) per step.
-      // - Random rapid hand shakes are < 350ms -> REJECTED!
-      if (mag > 11.5 && magDelta > 2.8) {
-        if (timeDelta >= 380 && timeDelta <= 850) {
-          // Rhythmic stride confirmed!
-          consecutiveRhythmicStepsRef.current += 1;
-          lastStepTimeRef.current = now;
+      // Update UI motion intensity meter
+      setMotionIntensity(Math.min(100, Math.round(delta * 15)));
 
-          // Require at least 2 consecutive rhythmic strides before counting to eliminate single accidental jerks
-          if (consecutiveRhythmicStepsRef.current >= 2) {
-            onUpdateSteps((prev) => prev + 1);
-          }
-        } else if (timeDelta > 850) {
-          // Reset cadence lock if pause between steps is too long
-          consecutiveRhythmicStepsRef.current = 1;
-          lastStepTimeRef.current = now;
-        } else {
-          // Time delta < 380ms: Rapid random shaking detected -> REJECT SHAKE!
-          consecutiveRhythmicStepsRef.current = 0;
-        }
+      // 3. Calibrated Human Walking/Running Stride Detection:
+      // - Walking/Running stride delta threshold: delta >= 1.1 m/s² or mag >= 10.6 m/s²
+      // - Minimum time between steps: 280ms (allows fast running ~210 steps/min up to slow walking)
+      if ((delta >= 1.1 || mag >= 10.6) && timeDelta >= 280) {
+        lastStepTimeRef.current = now;
+        setSensorStatus('Step Detected! 👣');
+        onUpdateSteps((prev) => prev + 1);
       }
     };
 
     if (isLiveTracking) {
+      setSensorStatus('Listening to Phone Motion...');
       if (typeof window !== 'undefined' && 'DeviceMotionEvent' in window) {
         if (typeof (DeviceMotionEvent as any).requestPermission === 'function') {
           (DeviceMotionEvent as any).requestPermission()
             .then((permissionState: string) => {
               if (permissionState === 'granted') {
                 window.addEventListener('devicemotion', handleDeviceMotion);
+              } else {
+                setSensorStatus('Motion Permission Denied');
               }
             })
-            .catch(() => {});
+            .catch(() => {
+              setSensorStatus('Motion Permission Required');
+            });
         } else {
           window.addEventListener('devicemotion', handleDeviceMotion);
         }
+      } else {
+        setSensorStatus('Motion Sensor Not Supported');
       }
+    } else {
+      setSensorStatus('Sensor Paused');
+      setMotionIntensity(0);
     }
 
     return () => {
@@ -120,7 +119,7 @@ export const StepCounterModal: React.FC<StepCounterModalProps> = ({
             <div>
               <h2 className="text-[16px] font-extrabold leading-tight">Pedometer Step Counter</h2>
               <p className="text-[10px] text-orange-400 font-semibold flex items-center gap-1">
-                <Activity className="w-3 h-3 text-orange-400" /> Smart Walking Cadence Filter Active
+                <Activity className="w-3 h-3 text-orange-400" /> {sensorStatus}
               </p>
             </div>
           </div>
@@ -170,6 +169,24 @@ export const StepCounterModal: React.FC<StepCounterModalProps> = ({
               </span>
             </div>
           </div>
+
+          {/* REAL-TIME MOTION INTENSITY VISUALIZER BAR */}
+          {isLiveTracking && (
+            <div className="space-y-1 pt-1">
+              <div className="flex items-center justify-between text-[9.5px] font-bold text-white/70">
+                <span className="flex items-center gap-1">
+                  <Zap className="w-3 h-3 text-amber-400" /> Live Accelerometer Motion:
+                </span>
+                <span className="text-orange-400">{motionIntensity}%</span>
+              </div>
+              <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-orange-500 to-amber-400 transition-all duration-150"
+                  style={{ width: `${motionIntensity}%` }}
+                />
+              </div>
+            </div>
+          )}
 
           {/* PROGRESS PERCENT BADGE */}
           <div className="flex items-center justify-center space-x-2 text-[11px]">
