@@ -6,7 +6,7 @@ import { soundEngine } from '../services/soundEngine';
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAuthSuccess: (userData: { name: string; email: string; isGuest?: boolean }) => void;
+  onAuthSuccess: (userData: { name: string; email: string }) => void;
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess }) => {
@@ -29,7 +29,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuc
 
     try {
       if (!isSupabaseConfigured || !supabase) {
-        // Fallback for offline local session
+        // Local auth fallback for environment without Supabase keys configured
+        if (!email.trim() || !password.trim()) {
+          throw new Error('Please enter a valid email and password.');
+        }
         onAuthSuccess({
           name: name.trim() || email.split('@')[0] || 'Athlete',
           email: email.trim(),
@@ -83,16 +86,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuc
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleGuestLogin = () => {
-    soundEngine.playTick();
-    onAuthSuccess({
-      name: 'Guest Athlete',
-      email: 'guest@aurafit.ai',
-      isGuest: true,
-    });
-    onClose();
   };
 
   return (
@@ -178,7 +171,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuc
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Goku"
+                  placeholder="e.g. Alex"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="w-full bg-white/5 border border-white/10 rounded-2xl py-2.5 pl-9 pr-3 text-[12px] text-white placeholder-white/30 focus:outline-none focus:border-orange-500"
@@ -227,16 +220,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuc
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
-
-        {/* GUEST DEMO TRIAL LINK */}
-        <div className="pt-2 text-center border-t border-white/10">
-          <button
-            onClick={handleGuestLogin}
-            className="text-[11px] text-orange-400 font-bold hover:underline"
-          >
-            ⚡ Or Continue as Guest Athlete (Instant Trial)
-          </button>
-        </div>
 
       </div>
     </div>

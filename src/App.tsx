@@ -60,10 +60,10 @@ const BACKGROUND_OPTIONS = {
 };
 
 export function App() {
-  // LANDING PAGE GATEWAY STATE
+  // LANDING PAGE GATEWAY STATE (Show Landing Page until logged in!)
   const [isLandingMode, setIsLandingMode] = useState<boolean>(() => {
     const savedUser = localStorage.getItem('aurafit_user');
-    return !savedUser; // Show Landing Page by default if user is not logged in!
+    return !savedUser;
   });
 
   // CLEAN INITIAL USER STATE
@@ -158,7 +158,7 @@ export function App() {
   useEffect(() => {
     localStorage.setItem('aurafit_user', JSON.stringify(user));
     if (isSupabaseConfigured) {
-      syncUserProfileToSupabase('guest-user-id', user);
+      syncUserProfileToSupabase('user-id', user);
     }
   }, [user]);
 
@@ -171,7 +171,7 @@ export function App() {
     if (isSupabaseConfigured) {
       const distanceKm = parseFloat((currentSteps * 0.00075).toFixed(2));
       const caloriesBurned = Math.round(currentSteps * 0.04);
-      syncStepsToSupabase('guest-user-id', currentSteps, distanceKm, caloriesBurned);
+      syncStepsToSupabase('user-id', currentSteps, distanceKm, caloriesBurned);
     }
   }, [currentSteps]);
 
@@ -245,8 +245,8 @@ export function App() {
     }));
 
     if (isSupabaseConfigured) {
-      syncCompletedLevelToSupabase('guest-user-id', targetKey, nextLvl);
-      logWorkoutToSupabase('guest-user-id', activePhaseRoutine.title, activePhaseRoutine.estimatedMins, activePhaseRoutine.estimatedCalories, 150);
+      syncCompletedLevelToSupabase('user-id', targetKey, nextLvl);
+      logWorkoutToSupabase('user-id', activePhaseRoutine.title, activePhaseRoutine.estimatedMins, activePhaseRoutine.estimatedCalories, 150);
     }
 
     setUser((prev) => {
@@ -284,7 +284,7 @@ export function App() {
     setActiveTab('vibe');
   };
 
-  const handleAuthSuccess = (userData: { name: string; email: string; isGuest?: boolean }) => {
+  const handleAuthSuccess = (userData: { name: string; email: string }) => {
     setUser((prev) => ({
       ...prev,
       name: userData.name,
@@ -354,10 +354,6 @@ export function App() {
           {isLandingMode ? (
             /* FULL-SCREEN LANDING PAGE GATEWAY */
             <LandingPage
-              onEnterApp={() => {
-                setIsLandingMode(false);
-                setActiveTab('vibe');
-              }}
               onOpenAuth={() => setIsAuthOpen(true)}
             />
           ) : (

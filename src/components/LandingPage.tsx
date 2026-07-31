@@ -3,11 +3,10 @@ import { Sparkles, ArrowRight, Lock } from 'lucide-react';
 import { soundEngine } from '../services/soundEngine';
 
 interface LandingPageProps {
-  onEnterApp: () => void;
   onOpenAuth: () => void;
 }
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp, onOpenAuth }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ onOpenAuth }) => {
   return (
     <div className="w-full h-full flex flex-col items-center justify-between p-6 text-center select-none animate-fade-up text-white relative">
       
@@ -28,12 +27,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp, onOpenAuth
         </p>
       </div>
 
-      {/* MINIMAL HIGH-IMPACT CTAS AT BOTTOM */}
+      {/* MINIMAL HIGH-IMPACT CTAS (TAKES USER DIRECTLY TO AUTH SIGN UP / SIGN IN) */}
       <div className="w-full max-w-xs space-y-2.5 pb-6">
         <button
           onClick={() => {
             soundEngine.playTick();
-            onEnterApp();
+            onOpenAuth();
           }}
           className="w-full py-4 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-white font-black text-[14px] uppercase tracking-wider shadow-xl shadow-orange-500/30 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center space-x-2"
         >
