@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Music, Play, Pause, SkipForward, Disc, Zap, Flame, Radio, Volume2, Sparkles } from 'lucide-react';
+import { Music, Play, Pause, SkipForward, Disc, Zap, Flame, Radio, Volume2, Sparkles, LogIn, CheckCircle2, User, RefreshCw } from 'lucide-react';
 import { soundEngine } from '../services/soundEngine';
 
 interface PlaylistOption {
   id: string;
   name: string;
-  genre: 'phonk' | 'hardstyle' | 'synthwave' | 'lofi' | 'metal';
+  genre: string;
   artist: string;
   bpm: string;
   spotifyUri: string;
@@ -13,7 +13,9 @@ interface PlaylistOption {
   accentColor: string;
 }
 
-const SPOTIFY_PLAYLISTS: PlaylistOption[] = [
+const DEFAULT_SPOTIFY_CLIENT_ID = '6abb2966d85641b2bf05478031676c46';
+
+const CURATED_PLAYLISTS: PlaylistOption[] = [
   {
     id: 'phonk-01',
     name: 'DRIFT PHONK PR',
@@ -67,13 +69,101 @@ const SPOTIFY_PLAYLISTS: PlaylistOption[] = [
 ];
 
 export const SpotifyAudioWidget: React.FC = () => {
-  const [selectedPlaylist, setSelectedPlaylist] = useState<PlaylistOption>(SPOTIFY_PLAYLISTS[0]);
+  const [selectedPlaylist, setSelectedPlaylist] = useState<PlaylistOption>(CURATED_PLAYLISTS[0]);
   const [activeTab, setActiveTab] = useState<'spotify' | 'synthesizer'>('spotify');
   const [isSynthPlaying, setIsSynthPlaying] = useState<boolean>(false);
+
+  // Spotify OAuth Account State
+  const [spotifyToken, setSpotifyToken] = useState<string | null>(() => {
+    return localStorage.getItem('spotify_access_token');
+  });
+  const [spotifyProfile, setSpotifyProfile] = useState<{ displayName: string; imageUrl?: string } | null>(null);
+  const [userPlaylists, setUserPlaylists] = useState<PlaylistOption[]>([]);
 
   // Web Audio Synth Beats Loop Ref
   const audioCtxRef = useRef<AudioContext | null>(null);
   const synthTimerRef = useRef<number | null>(null);
+
+  // Check URL hash for OAuth token redirect
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash && hash.includes('access_token=')) {
+      const tokenMatch = hash.match(/access_token=([^&]*)/);
+      if (tokenMatch && tokenMatch[1]) {
+        const token = tokenMatch[1];
+        setSpotifyToken(token);
+        localStorage.setItem('spotify_access_token', token);
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+    }
+  }, []);
+
+  // Fetch user profile & personal playlists when token exists
+  useEffect(() => {
+    if (!spotifyToken) return;
+
+    // 1. Fetch User Profile
+    fetch('https://api.spotify.com/v1/me', {
+      headers: { Authorization: `Bearer ${spotifyToken}` },
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) {
+          setSpotifyProfile({
+            displayName: data.display_name || 'Spotify Athlete',
+            imageUrl: data.images?.[0]?.url,
+          });
+        } else {
+          // Token expired
+          setSpotifyToken(null);
+          localStorage.removeItem('spotify_access_token');
+        }
+      })
+      .catch(() => {});
+
+    // 2. Fetch User Personal Playlists
+    fetch('https://api.spotify.com/v1/me/playlists?limit=8', {
+      headers: { Authorization: `Bearer ${spotifyToken}` },
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.items) {
+          const formatted: PlaylistOption[] = data.items.map((item: any, idx: number) => ({
+            id: `user-pl-${item.id || idx}`,
+            name: item.name?.toUpperCase() || 'MY PLAYLIST',
+            genre: 'personal',
+            artist: `By ${item.owner?.display_name || 'You'}`,
+            bpm: 'PERSONAL',
+            spotifyUri: `https://open.spotify.com/embed/playlist/${item.id}?utm_source=generator&theme=0`,
+            coverImage: item.images?.[0]?.url || CURATED_PLAYLISTS[0].coverImage,
+            accentColor: 'from-orange-500 to-amber-500',
+          }));
+          setUserPlaylists(formatted);
+        }
+      })
+      .catch(() => {});
+  }, [spotifyToken]);
+
+  const handleConnectSpotify = () => {
+    soundEngine.playTick();
+    const clientId = import.meta.env.VITE_SPOTIFY_CLIENT_ID || DEFAULT_SPOTIFY_CLIENT_ID;
+    const redirectUri = window.location.origin + window.location.pathname;
+    const scopes = ['user-read-private', 'user-read-email', 'playlist-read-private'].join('%20');
+
+    const authUrl = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=token&redirect_uri=${encodeURIComponent(
+      redirectUri
+    )}&scope=${scopes}&show_dialog=true`;
+
+    window.location.href = authUrl;
+  };
+
+  const handleDisconnectSpotify = () => {
+    soundEngine.playTick();
+    setSpotifyToken(null);
+    setSpotifyProfile(null);
+    setUserPlaylists([]);
+    localStorage.removeItem('spotify_access_token');
+  };
 
   const startWebAudioBeat = () => {
     try {
@@ -155,13 +245,15 @@ export const SpotifyAudioWidget: React.FC = () => {
     }
   };
 
+  const allAvailablePlaylists = [...userPlaylists, ...CURATED_PLAYLISTS];
+
   return (
     <div className="flex flex-col h-full justify-between select-none animate-fade-up space-y-2.5">
       
-      {/* HEADER WITH CATEGORY TOGGLES */}
+      {/* HEADER WITH SPOTIFY CONNECT & CATEGORY TOGGLES */}
       <div className="liquid-glass rounded-[24px] p-3 flex items-center justify-between border border-orange-500/30">
         <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center text-white shadow-md">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-emerald-500 to-green-500 flex items-center justify-center text-white shadow-md">
             <Radio className="w-4 h-4" />
           </div>
           <div>
@@ -169,34 +261,40 @@ export const SpotifyAudioWidget: React.FC = () => {
               <h3 className="text-[14px] font-extrabold text-white leading-tight">Tactile Spotify Deck</h3>
               <Sparkles className="w-3 h-3 text-amber-400" />
             </div>
-            <p className="text-[9.5px] text-orange-400 font-semibold uppercase tracking-wider">
-              {selectedPlaylist.name} ({selectedPlaylist.bpm})
+            <p className="text-[9.5px] text-emerald-400 font-semibold uppercase tracking-wider">
+              {spotifyProfile ? `Connected: ${spotifyProfile.displayName}` : 'Official Spotify Connect'}
             </p>
           </div>
         </div>
 
         <div className="flex items-center space-x-1">
+          {spotifyToken ? (
+            <button
+              onClick={handleDisconnectSpotify}
+              className="px-2.5 py-1 rounded-full text-[9.5px] font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center space-x-1 hover:bg-emerald-500/30 transition-all"
+              title="Disconnect Spotify Account"
+            >
+              <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+              <span>Connected</span>
+            </button>
+          ) : (
+            <button
+              onClick={handleConnectSpotify}
+              className="px-2.5 py-1 rounded-full text-[9.5px] font-extrabold bg-emerald-500 text-white shadow-md flex items-center space-x-1 hover:scale-105 active:scale-95 transition-all"
+            >
+              <LogIn className="w-3 h-3" />
+              <span>Connect Spotify</span>
+            </button>
+          )}
+
           <button
             onClick={() => {
               soundEngine.playTick();
-              setActiveTab('spotify');
+              setActiveTab(activeTab === 'spotify' ? 'synthesizer' : 'spotify');
             }}
-            className={`px-2.5 py-1 rounded-full text-[9.5px] font-extrabold uppercase transition-all ${
-              activeTab === 'spotify' ? 'bg-orange-500 text-white shadow-md' : 'text-white/60 hover:text-white'
-            }`}
+            className="px-2 py-1 rounded-full text-[9.5px] font-extrabold uppercase liquid-glass text-white/80 hover:text-white transition-all ml-1"
           >
-            Spotify
-          </button>
-          <button
-            onClick={() => {
-              soundEngine.playTick();
-              setActiveTab('synthesizer');
-            }}
-            className={`px-2.5 py-1 rounded-full text-[9.5px] font-extrabold uppercase transition-all ${
-              activeTab === 'synthesizer' ? 'bg-amber-500 text-white shadow-md' : 'text-white/60 hover:text-white'
-            }`}
-          >
-            Synth Beats
+            {activeTab === 'spotify' ? 'Synth Beats' : 'Spotify'}
           </button>
         </div>
       </div>
@@ -207,7 +305,7 @@ export const SpotifyAudioWidget: React.FC = () => {
           
           {/* PLAYLIST SELECTION TOUCH-SWIPEABLE HORIZONTAL STRIP */}
           <div className="flex items-center space-x-2 overflow-x-auto scroll-smooth snap-x snap-mandatory py-1 px-1 shrink-0 touch-pan-x no-scrollbar">
-            {SPOTIFY_PLAYLISTS.map((pl) => (
+            {allAvailablePlaylists.map((pl) => (
               <button
                 key={pl.id}
                 onClick={() => {
@@ -216,18 +314,18 @@ export const SpotifyAudioWidget: React.FC = () => {
                 }}
                 className={`px-3 py-1.5 rounded-2xl text-[10px] font-extrabold shrink-0 flex items-center space-x-1.5 border snap-start transition-all active:scale-95 ${
                   selectedPlaylist.id === pl.id
-                    ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white border-white/40 shadow-lg scale-105'
+                    ? 'bg-gradient-to-r from-emerald-500 to-green-500 text-white border-white/40 shadow-lg scale-105'
                     : 'liquid-glass text-white/70 border-white/10 hover:border-white/30'
                 }`}
               >
-                <Flame className="w-3 h-3 text-amber-300 shrink-0" />
+                <Flame className="w-3 h-3 text-emerald-300 shrink-0" />
                 <span className="whitespace-nowrap">{pl.name}</span>
               </button>
             ))}
           </div>
 
           {/* SPOTIFY EMBEDDED IFRAME PLAYER */}
-          <div className="flex-1 rounded-[24px] overflow-hidden border border-white/15 shadow-2xl relative bg-black/60">
+          <div className="flex-1 rounded-[24px] overflow-hidden border border-emerald-500/20 shadow-2xl relative bg-black/60">
             <iframe
               title="Spotify Playlist Player"
               src={selectedPlaylist.spotifyUri}
@@ -293,7 +391,7 @@ export const SpotifyAudioWidget: React.FC = () => {
       {/* MINI FOOTER DOCK PLAYER */}
       <div className="liquid-glass rounded-[24px] p-3 flex items-center justify-between border border-white/10 shrink-0">
         <div className="flex items-center space-x-2.5">
-          <div className="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 border border-orange-500/30">
+          <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 border border-emerald-500/30">
             <Disc className={`w-4 h-4 ${isSynthPlaying ? 'animate-spin' : ''}`} />
           </div>
           <div>
@@ -303,8 +401,8 @@ export const SpotifyAudioWidget: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-1.5">
-          <div className="flex items-center space-x-1 px-2 py-0.5 rounded-full bg-white/10 text-[9px] font-bold text-amber-400 border border-amber-500/30">
-            <Zap className="w-3 h-3 text-amber-400" />
+          <div className="flex items-center space-x-1 px-2 py-0.5 rounded-full bg-white/10 text-[9px] font-bold text-emerald-400 border border-emerald-500/30">
+            <Zap className="w-3 h-3 text-emerald-400" />
             <span>{selectedPlaylist.bpm}</span>
           </div>
         </div>
