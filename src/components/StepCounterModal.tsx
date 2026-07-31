@@ -7,7 +7,7 @@ interface StepCounterModalProps {
   onClose: () => void;
   currentSteps: number;
   stepGoal: number;
-  onUpdateSteps: (newSteps: number) => void;
+  onUpdateSteps: (newSteps: number | ((prev: number) => number)) => void;
 }
 
 export const StepCounterModal: React.FC<StepCounterModalProps> = ({
@@ -26,52 +26,48 @@ export const StepCounterModal: React.FC<StepCounterModalProps> = ({
   const activeMins = Math.round(currentSteps / 100); // Avg ~ 100 steps/min
   const progressPercent = Math.min(100, Math.round((currentSteps / stepGoal) * 100));
 
-  // REAL HARDWARE PHONE MOTION PEDOMETER + LIVE FALLBACK SIMULATION
+  // 100% REAL HARDWARE PHONE MOTION PEDOMETER (ZERO TIMER SIMULATION)
   useEffect(() => {
-    let timerInterval: NodeJS.Timeout;
-
     const handleDeviceMotion = (event: DeviceMotionEvent) => {
       if (!isLiveTracking) return;
-      const acc = event.accelerationIncludingGravity;
+
+      const acc = event.acceleration || event.accelerationIncludingGravity;
       if (!acc || acc.x === null || acc.y === null || acc.z === null) return;
 
-      // Calculate total acceleration G-force vector magnitude
+      // Calculate acceleration magnitude
       const mag = Math.sqrt(acc.x * acc.x + acc.y * acc.y + acc.z * acc.z);
       const now = Date.now();
 
-      // Step threshold ~ 12.5 m/s² (human stride impact spike) with 300ms debounce
-      if (mag > 12.5 && now - lastStepTimeRef.current > 300) {
+      // Human walking stride threshold ~ 13.0 m/s² with 350ms stride interval debounce
+      if (mag > 13.0 && now - lastStepTimeRef.current > 350) {
         lastStepTimeRef.current = now;
-        onUpdateSteps(currentSteps + 1);
+        onUpdateSteps((prevSteps) => prevSteps + 1);
       }
     };
 
     if (isLiveTracking) {
-      // 1. Enable Hardware Accelerometer Motion Sensor if available
       if (typeof window !== 'undefined' && 'DeviceMotionEvent' in window) {
-        // Request iOS 13+ motion permission if required
+        // iOS 13+ motion permission handling
         if (typeof (DeviceMotionEvent as any).requestPermission === 'function') {
-          (DeviceMotionEvent as any).requestPermission().then((permissionState: string) => {
-            if (permissionState === 'granted') {
-              window.addEventListener('devicemotion', handleDeviceMotion);
-            }
-          }).catch(() => {});
+          (DeviceMotionEvent as any).requestPermission()
+            .then((permissionState: string) => {
+              if (permissionState === 'granted') {
+                window.addEventListener('devicemotion', handleDeviceMotion);
+              }
+            })
+            .catch(() => {});
         } else {
           window.addEventListener('devicemotion', handleDeviceMotion);
         }
       }
-
-      // 2. Active walking fallback pulse timer (adds steps periodically while active)
-      timerInterval = setInterval(() => {
-        onUpdateSteps(currentSteps + Math.floor(Math.random() * 3) + 2);
-      }, 1800);
     }
 
     return () => {
-      window.removeEventListener('devicemotion', handleDeviceMotion);
-      clearInterval(timerInterval);
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('devicemotion', handleDeviceMotion);
+      }
     };
-  }, [isLiveTracking, currentSteps, onUpdateSteps]);
+  }, [isLiveTracking, onUpdateSteps]);
 
   if (!isOpen) return null;
 
@@ -98,7 +94,7 @@ export const StepCounterModal: React.FC<StepCounterModalProps> = ({
             <div>
               <h2 className="text-[16px] font-extrabold leading-tight">Pedometer Step Counter</h2>
               <p className="text-[10px] text-orange-400 font-semibold flex items-center gap-1">
-                <Smartphone className="w-3 h-3" /> Hardware Accelerometer Motion Active
+                <Smartphone className="w-3 h-3" /> Real Hardware Motion Pedometer
               </p>
             </div>
           </div>
@@ -199,7 +195,7 @@ export const StepCounterModal: React.FC<StepCounterModalProps> = ({
               }`}
             >
               {isLiveTracking ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-              <span>{isLiveTracking ? 'Pause Motion Sensor' : 'Start Live Pedometer'}</span>
+              <span>{isLiveTracking ? 'Motion Sensor Active' : 'Start Motion Sensor'}</span>
             </button>
 
             {/* MANUAL +500 STEPS */}
