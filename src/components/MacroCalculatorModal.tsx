@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Calculator, Utensils, Flame, Sparkles, Dumbbell, ChevronRight, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { X, Calculator, Utensils, Flame, Sparkles, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { UserProfile } from '../types';
 import { callMultiProviderLLMCoachAPI } from '../services/aiEngine';
 import { soundEngine } from '../services/soundEngine';
@@ -71,7 +71,7 @@ Format with 4 meals (Breakfast, Lunch, Pre-Workout Snack, Dinner). Keep it conci
 
     try {
       const planText = await callMultiProviderLLMCoachAPI(prompt, user, 'nvidia');
-      soundEngine.playLevelUpFanfare();
+      soundEngine.playSetCompleteChime();
       setAiMealPlan(planText);
     } catch (e) {
       console.error('Failed to generate AI meal plan:', e);
