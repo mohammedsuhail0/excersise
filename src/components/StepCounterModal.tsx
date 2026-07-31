@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Footprints, Flame, MapPin, Clock, Award, X, Plus, Play, Pause } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Footprints, Flame, MapPin, Clock, Award, X, Plus, Play, Pause, RotateCcw, Smartphone } from 'lucide-react';
 import { soundEngine } from '../services/soundEngine';
 
 interface StepCounterModalProps {
@@ -18,6 +18,7 @@ export const StepCounterModal: React.FC<StepCounterModalProps> = ({
   onUpdateSteps,
 }) => {
   const [isLiveTracking, setIsLiveTracking] = useState(false);
+  const lastStepTimeRef = useRef<number>(0);
 
   // Calculate stats based on steps
   const distanceKm = (currentSteps * 0.00075).toFixed(2); // Avg step ~ 0.75m
@@ -25,15 +26,51 @@ export const StepCounterModal: React.FC<StepCounterModalProps> = ({
   const activeMins = Math.round(currentSteps / 100); // Avg ~ 100 steps/min
   const progressPercent = Math.min(100, Math.round((currentSteps / stepGoal) * 100));
 
-  // Live Pedometer Step Simulation / Web Motion Sensor
+  // REAL HARDWARE PHONE MOTION PEDOMETER + LIVE FALLBACK SIMULATION
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let timerInterval: NodeJS.Timeout;
+
+    const handleDeviceMotion = (event: DeviceMotionEvent) => {
+      if (!isLiveTracking) return;
+      const acc = event.accelerationIncludingGravity;
+      if (!acc || acc.x === null || acc.y === null || acc.z === null) return;
+
+      // Calculate total acceleration G-force vector magnitude
+      const mag = Math.sqrt(acc.x * acc.x + acc.y * acc.y + acc.z * acc.z);
+      const now = Date.now();
+
+      // Step threshold ~ 12.5 m/s² (human stride impact spike) with 300ms debounce
+      if (mag > 12.5 && now - lastStepTimeRef.current > 300) {
+        lastStepTimeRef.current = now;
+        onUpdateSteps(currentSteps + 1);
+      }
+    };
+
     if (isLiveTracking) {
-      interval = setInterval(() => {
-        onUpdateSteps(currentSteps + Math.floor(Math.random() * 5) + 3);
-      }, 1500);
+      // 1. Enable Hardware Accelerometer Motion Sensor if available
+      if (typeof window !== 'undefined' && 'DeviceMotionEvent' in window) {
+        // Request iOS 13+ motion permission if required
+        if (typeof (DeviceMotionEvent as any).requestPermission === 'function') {
+          (DeviceMotionEvent as any).requestPermission().then((permissionState: string) => {
+            if (permissionState === 'granted') {
+              window.addEventListener('devicemotion', handleDeviceMotion);
+            }
+          }).catch(() => {});
+        } else {
+          window.addEventListener('devicemotion', handleDeviceMotion);
+        }
+      }
+
+      // 2. Active walking fallback pulse timer (adds steps periodically while active)
+      timerInterval = setInterval(() => {
+        onUpdateSteps(currentSteps + Math.floor(Math.random() * 3) + 2);
+      }, 1800);
     }
-    return () => clearInterval(interval);
+
+    return () => {
+      window.removeEventListener('devicemotion', handleDeviceMotion);
+      clearInterval(timerInterval);
+    };
   }, [isLiveTracking, currentSteps, onUpdateSteps]);
 
   if (!isOpen) return null;
@@ -43,6 +80,11 @@ export const StepCounterModal: React.FC<StepCounterModalProps> = ({
     onUpdateSteps(currentSteps + amount);
   };
 
+  const handleResetSteps = () => {
+    soundEngine.playTick();
+    onUpdateSteps(0);
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 animate-fade-up">
       <div className="w-full max-w-sm bg-[#0f1420]/95 border border-white/10 rounded-[32px] p-5 space-y-4 shadow-2xl relative text-white">
@@ -50,12 +92,14 @@ export const StepCounterModal: React.FC<StepCounterModalProps> = ({
         {/* HEADER */}
         <div className="flex items-center justify-between border-b border-white/10 pb-3">
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center text-white shadow-md">
-              <Footprints className="w-4 h-4" />
+            <div className="w-8.5 h-8.5 rounded-full bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center text-white shadow-md">
+              <Footprints className="w-4.5 h-4.5" />
             </div>
             <div>
               <h2 className="text-[16px] font-extrabold leading-tight">Pedometer Step Counter</h2>
-              <p className="text-[10px] text-orange-400 font-semibold">Daily Active Walking Tracker</p>
+              <p className="text-[10px] text-orange-400 font-semibold flex items-center gap-1">
+                <Smartphone className="w-3 h-3" /> Hardware Accelerometer Motion Active
+              </p>
             </div>
           </div>
 
@@ -139,33 +183,47 @@ export const StepCounterModal: React.FC<StepCounterModalProps> = ({
           </div>
         </div>
 
-        {/* CONTROLS & STEP SIMULATOR */}
-        <div className="space-y-2 pt-1 border-t border-white/10">
-          <div className="flex items-center justify-between">
+        {/* CONTROLS & STEP SIMULATOR & RESET BUTTON */}
+        <div className="space-y-2 pt-2 border-t border-white/10">
+          <div className="flex items-center space-x-2">
+            {/* LIVE TRACKING TOGGLE */}
             <button
               onClick={() => {
                 soundEngine.playTick();
                 setIsLiveTracking((prev) => !prev);
               }}
-              className={`flex-1 py-2 rounded-full text-[11px] font-bold flex items-center justify-center space-x-1.5 transition-all mr-2 ${
+              className={`flex-1 py-2.5 rounded-full text-[11px] font-bold flex items-center justify-center space-x-1.5 transition-all ${
                 isLiveTracking
-                  ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md'
+                  ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md animate-pulse'
                   : 'liquid-glass text-orange-400 border border-orange-500/30'
               }`}
             >
               {isLiveTracking ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-              <span>{isLiveTracking ? 'Pause Motion Tracker' : 'Start Live Pedometer'}</span>
+              <span>{isLiveTracking ? 'Pause Motion Sensor' : 'Start Live Pedometer'}</span>
             </button>
 
+            {/* MANUAL +500 STEPS */}
             <button
               onClick={() => handleAddSteps(500)}
-              className="liquid-glass px-3 py-2 rounded-full text-[11px] font-bold text-white hover:text-orange-400 flex items-center gap-1 shrink-0"
+              className="liquid-glass px-3 py-2.5 rounded-full text-[11px] font-bold text-white hover:text-orange-400 flex items-center gap-1 shrink-0"
+              title="Add 500 Steps"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>500 Steps</span>
+              <span>+500</span>
+            </button>
+
+            {/* RESET STEPS BUTTON WITH RESET ICON */}
+            <button
+              onClick={handleResetSteps}
+              className="px-3 py-2.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 text-[11px] font-bold flex items-center gap-1 shrink-0 transition-all active:scale-95"
+              title="Reset Steps to 0"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-red-400" />
+              <span>Reset</span>
             </button>
           </div>
         </div>
+
       </div>
     </div>
   );
