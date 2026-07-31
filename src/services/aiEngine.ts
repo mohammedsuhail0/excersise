@@ -97,7 +97,7 @@ export const ROUTINES_MAP: Record<VibeStage, WorkoutRoutine> = {
 
 export type LLMProvider = 'nvidia' | 'groq' | 'gemini';
 
-// GUARANTEED DYNAMIC LLM COACH ENGINE
+// 100% DIRECT LIVE NVIDIA NIM LLM ENGINE (NO OFFLINE FALLBACKS AT ALL)
 export async function callMultiProviderLLMCoachAPI(
   prompt: string,
   userContext: any,
@@ -120,9 +120,11 @@ If you are bleeding, cut, or severely injured, do NOT do any pushups or workouts
 3. Rest and do NOT strain your body until fully healed. Your health and safety come FIRST! 🙏`;
   }
 
-  const systemInstruction = `You are Sensei Goku, an elite Master Calisthenics Coach. You talk directly to your athlete ${userContext.name || 'Goku'} (${userContext.weightKg || 78}kg, ${userContext.heightCm || 180}cm).
+  const systemInstruction = `You are Sensei Goku, a real-life expert personal trainer and calisthenics coach. You talk naturally like a real human bro/coach to your athlete ${userContext.name || 'Goku'} (${userContext.weightKg || 78}kg, ${userContext.heightCm || 180}cm).
 
-Give a direct, highly customized answer specifically addressing their question. Use bullet points and emojis. Keep under 110 words!`;
+CRITICAL INSTRUCTIONS:
+- Give a direct, highly customized answer specifically addressing their question. Use bullet points and emojis. Keep under 120 words!
+- If the user asks for workouts for abs, arms, chest, legs, etc., give a specific calisthenics routine for that exact muscle group.`;
 
   const apiKey =
     customApiKey ||
@@ -130,7 +132,10 @@ Give a direct, highly customized answer specifically addressing their question. 
     import.meta.env.VITE_NVIDIA_API_KEY ||
     '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';
 
-  // Try proxied endpoint first to bypass browser CORS, then direct URL
+  if (!apiKey) {
+    return `⚠️ NVIDIA API Key Missing! Please set VITE_NVIDIA_API_KEY in your .env file to enable live Llama 3.1 70B AI responses.`;
+  }
+
   const endpointsToTry = [
     '/api/nvidia/v1/chat/completions',
     'https://integrate.api.nvidia.com/v1/chat/completions',
@@ -139,21 +144,20 @@ Give a direct, highly customized answer specifically addressing their question. 
   const modelsToTry = [
     'meta/llama-3.1-70b-instruct',
     'nvidia/llama-3.1-nemotron-70b-instruct',
+    'meta/llama3-70b-instruct',
   ];
+
+  let lastError = '';
 
   for (const endpoint of endpointsToTry) {
     for (const model of modelsToTry) {
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 6000);
-
         const response = await fetch(endpoint, {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${apiKey.trim()}`,
             'Content-Type': 'application/json',
           },
-          signal: controller.signal,
           body: JSON.stringify({
             model: model,
             messages: [
@@ -161,83 +165,29 @@ Give a direct, highly customized answer specifically addressing their question. 
               { role: 'user', content: prompt },
             ],
             temperature: 0.7,
-            max_tokens: 220,
+            max_tokens: 250,
           }),
         });
-        clearTimeout(timeoutId);
 
         if (response.ok) {
           const data = await response.json();
           const text = data?.choices?.[0]?.message?.content;
           if (text) {
-            console.log(`✅ NVIDIA NIM API Success via ${endpoint} using ${model}`);
+            console.log(`✅ NVIDIA NIM LLM Response received via ${endpoint} (${model})`);
             return text.trim();
           }
         } else {
-          console.warn(`NVIDIA API ${endpoint} HTTP ${response.status}:`, await response.text());
+          const errBody = await response.text();
+          console.error(`❌ NVIDIA API (${endpoint}) HTTP ${response.status}:`, errBody);
+          lastError = `HTTP ${response.status}: ${errBody}`;
         }
       } catch (e: any) {
-        console.warn(`NVIDIA API endpoint ${endpoint} fetch error:`, e?.message);
+        console.error(`❌ NVIDIA API Fetch Error on ${endpoint}:`, e?.message);
+        lastError = e?.message || 'Network Fetch Error';
       }
     }
   }
 
-  // DYNAMIC FALLBACK MATCHING THE EXACT QUESTION IF NETWORK FAILS
-  return generateDynamicSmartFallback(prompt, userContext);
-}
-
-function generateDynamicSmartFallback(prompt: string, userContext: any): string {
-  const lower = prompt.toLowerCase();
-  const name = userContext.name || 'Goku';
-  const weight = userContext.weightKg || 78;
-
-  if (lower.includes('abs') || lower.includes('core') || lower.includes('stomach') || lower.includes('six pack')) {
-    return `🔥 Abs Workout for ${name}:
-• Hanging Leg Raises: 4 sets x 12 reps (Hollow body tension)
-• Dragon Flags or Negative Tuck Levers: 3 sets x 8 reps
-• Plank to Pike Pulses: 3 sets x 45 seconds
-Keep core hollow and pelvis tilted posteriorly throughout! ⚡`;
-  }
-
-  if (lower.includes('arm') || lower.includes('bicep') || lower.includes('tricep')) {
-    return `💪 Calisthenics Arm Blast for ${name}:
-• Chins / Underhand Pull-ups: 4 sets x 8 reps (Peak bicep squeeze)
-• Bodyweight Tricep Extensions (on low bar/bench): 4 sets x 12 reps
-• Korean Dips or Ring Dips: 3 sets x 10 reps
-Focus on strict 3-second eccentric negatives on every rep! 🔥`;
-  }
-
-  if (lower.includes('chest') || lower.includes('pushup') || lower.includes('push-up') || lower.includes('dip')) {
-    return `💥 Chest Hypertrophy Blast:
-• Ring Dips / Deep Bar Dips: 4 sets x 10 reps
-• Archer Push-ups: 3 sets x 8 reps per side
-• Deficit Push-ups (Hands on parallettes): 4 sets x 15 reps
-Squeeze inner chest hard at full lockout! ⚡`;
-  }
-
-  if (lower.includes('leg') || lower.includes('squat') || lower.includes('pistol')) {
-    return `🦵 Calisthenics Leg Annihilation:
-• Pistol Squats: 4 sets x 8 reps per leg
-• Nordic Hamstring Curls (or Negatives): 3 sets x 6 reps
-• Explosive Jump Squats: 4 sets x 15 reps
-Explode off the floor with max power! ⚡`;
-  }
-
-  if (lower.includes('shoulder') || lower.includes('pike') || lower.includes('handstand')) {
-    return `🤸 Boulder Shoulders Routine:
-• Elevated Pike Push-ups: 4 sets x 10 reps
-• Wall Handstand Holds: 3 sets x 45 seconds
-• Scapular Wall Slides & Shrugs: 3 sets x 15 reps
-Keep elbows tucked 45° and push shoulders up into ears! 🔥`;
-  }
-
-  if (lower.includes('eat') || lower.includes('diet') || lower.includes('food') || lower.includes('protein') || lower.includes('calories')) {
-    const protein = Math.round(weight * 2);
-    return `🥩 Nutrition Guide for ${weight}kg physique goal:
-• Protein: ${protein}g daily (Chicken breast, egg whites, Greek yogurt)
-• Carbs: 220g clean carbs (Oats, rice, sweet potatoes)
-• Water: 3.5L daily to keep muscles hydrated and full! 💧`;
-  }
-
-  return `💪 Hey ${name}! For ${prompt}, focus on progressive leverage (shifting body weight), strict 3-second negatives, and full range of motion. Give it 100% effort on every single set! 🔥`;
+  // NO OFFLINE FALLBACK - RETURN EXACT NVIDIA API ERROR
+  return `⚠️ Direct NVIDIA NIM LLM Connection Error: ${lastError || 'Failed to reach integrate.api.nvidia.com'}. Please check your internet connection or API key.`;
 }
