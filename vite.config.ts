@@ -21,15 +21,6 @@ export default defineConfig({
           'Origin': 'https://api.groq.com',
         }
       },
-      '/api/nvidia': {
-        target: 'https://integrate.api.nvidia.com',
-        changeOrigin: true,
-        secure: false,
-        rewrite: (path) => path.replace(/^\/api\/nvidia/, ''),
-        headers: {
-          'Origin': 'https://integrate.api.nvidia.com',
-        }
-      },
     },
   }
 });
