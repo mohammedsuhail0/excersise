@@ -95,11 +95,16 @@ export const ROUTINES_MAP: Record<VibeStage, WorkoutRoutine> = {
   },
 };
 
-// LIVE REAL-TIME GEMINI LLM API INTEGRATION
-export async function callRealLLMCoachAPI(prompt: string, userContext: any, customApiKey?: string): Promise<string> {
-  const apiKey = customApiKey || import.meta.env.VITE_GEMINI_API_KEY || '';
+export type LLMProvider = 'groq' | 'nvidia' | 'gemini';
 
-  const systemInstruction = `You are Sensei Goku, a elite Master Calisthenics Coach. You talk directly to the athlete:
+// MULTI-PROVIDER LIVE REAL-TIME LLM ENGINE (GROQ, NVIDIA NIM, GEMINI)
+export async function callMultiProviderLLMCoachAPI(
+  prompt: string,
+  userContext: any,
+  provider: LLMProvider = 'groq',
+  customApiKey?: string
+): Promise<string> {
+  const systemInstruction = `You are Sensei Goku, an elite Master Calisthenics & Fitness Coach. You speak directly to the athlete:
 - Name: ${userContext.name || 'Athlete'}
 - Height: ${userContext.heightCm || 180}cm
 - Weight: ${userContext.weightKg || 78}kg
@@ -108,35 +113,105 @@ export async function callRealLLMCoachAPI(prompt: string, userContext: any, cust
 
 Answer the user's question with deep biomechanical accuracy, progressive calisthenics leverage cues, and sports nutrition science. Keep your answer under 160 words, concise, formatted with clear bullet points and emojis. Be motivating, direct, and helpful!`;
 
-  if (apiKey) {
-    try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-        {
+  // 1. GROQ API (ULTRA FAST LLAMA-3.3-70B / LLAMA3-8B)
+  if (provider === 'groq') {
+    const apiKey = customApiKey || import.meta.env.VITE_GROQ_API_KEY || '';
+    if (apiKey) {
+      try {
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
           body: JSON.stringify({
-            contents: [
-              {
-                role: 'user',
-                parts: [{ text: `${systemInstruction}\n\nUser Question: ${prompt}` }],
-              },
+            model: 'llama-3.3-70b-versatile',
+            messages: [
+              { role: 'system', content: systemInstruction },
+              { role: 'user', content: prompt },
             ],
+            temperature: 0.7,
+            max_tokens: 350,
           }),
-        }
-      );
+        });
 
-      if (response.ok) {
-        const data = await response.json();
-        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (text) return text.trim();
+        if (response.ok) {
+          const data = await response.json();
+          const text = data?.choices?.[0]?.message?.content;
+          if (text) return text.trim();
+        }
+      } catch (e) {
+        console.warn('Groq LLM API Error:', e);
       }
-    } catch (e) {
-      console.warn('Gemini LLM API call error:', e);
     }
   }
 
-  // Smart dynamic fallback if API key is not yet set
+  // 2. NVIDIA NIM API (NVIDIA NEMOTRON / LLAMA 3.1 70B)
+  if (provider === 'nvidia') {
+    const apiKey = customApiKey || import.meta.env.VITE_NVIDIA_API_KEY || '';
+    if (apiKey) {
+      try {
+        const response = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'meta/llama-3.1-70b-instruct',
+            messages: [
+              { role: 'system', content: systemInstruction },
+              { role: 'user', content: prompt },
+            ],
+            temperature: 0.7,
+            max_tokens: 350,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const text = data?.choices?.[0]?.message?.content;
+          if (text) return text.trim();
+        }
+      } catch (e) {
+        console.warn('NVIDIA NIM API Error:', e);
+      }
+    }
+  }
+
+  // 3. GEMINI 1.5 FLASH API
+  if (provider === 'gemini') {
+    const apiKey = customApiKey || import.meta.env.VITE_GEMINI_API_KEY || '';
+    if (apiKey) {
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [
+                {
+                  role: 'user',
+                  parts: [{ text: `${systemInstruction}\n\nUser Question: ${prompt}` }],
+                },
+              ],
+            }),
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text) return text.trim();
+        }
+      } catch (e) {
+        console.warn('Gemini API Error:', e);
+      }
+    }
+  }
+
+  // Dynamic Smart Fallback if API keys aren't set yet
   return generateDynamicSmartFallback(prompt, userContext);
 }
 
