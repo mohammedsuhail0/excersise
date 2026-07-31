@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Send, Sparkles, Bot, User, Flame, Dumbbell, Zap } from 'lucide-react';
+import { X, Send, Sparkles, Bot, User, Flame, Dumbbell, Zap, Key } from 'lucide-react';
 import { UserProfile } from '../types';
-import { generateCoachResponse } from '../services/aiEngine';
+import { callRealLLMCoachAPI } from '../services/aiEngine';
 import { soundEngine } from '../services/soundEngine';
 
 interface AICalisthenicsCoachModalProps {
@@ -26,11 +26,13 @@ export const AICalisthenicsCoachModal: React.FC<AICalisthenicsCoachModalProps> =
     {
       id: '1',
       sender: 'coach',
-      text: `OSS ${user.name}! I am your AI Calisthenics Sensei. Ask me anything about form cues, wrist mobility, muscle-up transitions, or nutrition for your ${user.targetPhysique} goal!`,
+      text: `OSS ${user.name}! I am your AI Calisthenics Sensei powered by Gemini LLM. Ask me ANY question about workouts, form cues, or diet!`,
       time: 'Just now',
     },
   ]);
   const [inputText, setInputText] = useState('');
+  const [apiKeyInput, setApiKeyInput] = useState(() => localStorage.getItem('aurafit_gemini_api_key') || '');
+  const [showKeyInput, setShowKeyInput] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -40,7 +42,13 @@ export const AICalisthenicsCoachModal: React.FC<AICalisthenicsCoachModalProps> =
 
   if (!isOpen) return null;
 
-  const handleSendMessage = (textToSend?: string) => {
+  const handleSaveApiKey = (key: string) => {
+    setApiKeyInput(key);
+    localStorage.setItem('aurafit_gemini_api_key', key);
+    setShowKeyInput(false);
+  };
+
+  const handleSendMessage = async (textToSend?: string) => {
     const text = textToSend || inputText;
     if (!text.trim()) return;
 
@@ -56,9 +64,9 @@ export const AICalisthenicsCoachModal: React.FC<AICalisthenicsCoachModalProps> =
     if (!textToSend) setInputText('');
     setIsTyping(true);
 
-    setTimeout(() => {
+    try {
+      const replyText = await callRealLLMCoachAPI(text, user, apiKeyInput);
       soundEngine.playSetCompleteChime();
-      const replyText = generateCoachResponse(text, user);
       const coachMsg: Message = {
         id: `msg-${Date.now() + 1}`,
         sender: 'coach',
@@ -66,8 +74,11 @@ export const AICalisthenicsCoachModal: React.FC<AICalisthenicsCoachModalProps> =
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       setMessages((prev) => [...prev, coachMsg]);
+    } catch (e) {
+      console.error(e);
+    } finally {
       setIsTyping(false);
-    }, 900);
+    }
   };
 
   const handleQuickChip = (prompt: string) => {
@@ -78,7 +89,7 @@ export const AICalisthenicsCoachModal: React.FC<AICalisthenicsCoachModalProps> =
     <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 animate-fade-up">
       <div className="w-full max-w-sm h-[90vh] max-h-[620px] bg-[#0f1420]/95 border border-orange-500/40 rounded-[32px] flex flex-col justify-between overflow-hidden shadow-2xl relative text-white">
         
-        {/* MODAL HEADER */}
+        {/* MODAL HEADER WITH API KEY TOGGLE */}
         <div className="p-3.5 border-b border-white/10 flex items-center justify-between bg-black/40 backdrop-blur-md shrink-0">
           <div className="flex items-center space-x-2.5">
             <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center text-white shadow-md border border-white/20">
@@ -89,17 +100,52 @@ export const AICalisthenicsCoachModal: React.FC<AICalisthenicsCoachModalProps> =
                 <h2 className="text-[15px] font-extrabold leading-tight">AI Calisthenics Sensei</h2>
                 <Sparkles className="w-3.5 h-3.5 text-amber-400" />
               </div>
-              <p className="text-[9.5px] text-orange-400 font-semibold">LLM Master Trainer Active</p>
+              <p className="text-[9.5px] text-orange-400 font-semibold">Gemini 1.5 Flash LLM Live</p>
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="w-7 h-7 rounded-full liquid-glass flex items-center justify-center text-white/70 hover:text-white"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center space-x-1">
+            <button
+              onClick={() => setShowKeyInput((prev) => !prev)}
+              className="w-7 h-7 rounded-full liquid-glass flex items-center justify-center text-amber-400 hover:text-white"
+              title="Set Gemini LLM API Key"
+            >
+              <Key className="w-3.5 h-3.5" />
+            </button>
+
+            <button
+              onClick={onClose}
+              className="w-7 h-7 rounded-full liquid-glass flex items-center justify-center text-white/70 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
+
+        {/* OPTIONAL GEMINI API KEY INPUT BAR */}
+        {showKeyInput && (
+          <div className="p-2.5 bg-black/80 border-b border-white/10 text-[11px] space-y-1.5 shrink-0">
+            <div className="flex items-center justify-between">
+              <span className="text-amber-400 font-bold">Google Gemini API Key:</span>
+              <span className="text-[9px] text-white/50">Optional</span>
+            </div>
+            <div className="flex gap-1">
+              <input
+                type="password"
+                value={apiKeyInput}
+                onChange={(e) => handleSaveApiKey(e.target.value)}
+                placeholder="Paste AI key or leave blank for smart AI"
+                className="flex-1 bg-white/10 border border-white/20 rounded-full px-3 py-1 text-[11px] outline-none text-white placeholder:text-white/40"
+              />
+              <button
+                onClick={() => setShowKeyInput(false)}
+                className="px-3 py-1 bg-orange-500 rounded-full text-[10px] font-bold text-white"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* MESSAGES VIEWPORT */}
         <div className="flex-1 overflow-y-auto p-3 space-y-3 no-scrollbar min-h-0">
@@ -139,7 +185,7 @@ export const AICalisthenicsCoachModal: React.FC<AICalisthenicsCoachModalProps> =
                 <Bot className="w-3.5 h-3.5" />
               </div>
               <div className="liquid-glass px-3 py-2 rounded-[18px] text-[11px] text-orange-400 flex items-center space-x-1.5 animate-pulse">
-                <span>Sensei is thinking...</span>
+                <span>Sensei LLM is generating answer...</span>
               </div>
             </div>
           )}
@@ -149,7 +195,7 @@ export const AICalisthenicsCoachModal: React.FC<AICalisthenicsCoachModalProps> =
         {/* QUICK ACTION PROMPT CHIPS */}
         <div className="px-3 py-1.5 border-t border-white/10 overflow-x-auto no-scrollbar flex items-center space-x-1.5 shrink-0">
           <button
-            onClick={() => handleQuickChip('How do I fix wrist pain during Pike Push-Ups?')}
+            onClick={() => handleQuickChip('How to fix wrist pain during Pike Push-Ups?')}
             className="liquid-glass px-2.5 py-1 rounded-full text-[9.5px] font-semibold text-orange-400 border border-orange-500/30 hover:border-orange-500/60 shrink-0 flex items-center space-x-1"
           >
             <Zap className="w-3 h-3" />
@@ -181,7 +227,7 @@ export const AICalisthenicsCoachModal: React.FC<AICalisthenicsCoachModalProps> =
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-              placeholder="Ask Sensei about calisthenics form or diet..."
+              placeholder="Ask Sensei ANY question..."
               className="flex-1 bg-transparent text-white text-[12px] outline-none placeholder:text-white/40"
             />
             <button

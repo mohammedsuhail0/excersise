@@ -64,30 +64,7 @@ export const ROUTINES_MAP: Record<VibeStage, WorkoutRoutine> = {
     description: 'Low-impact flow designed for joint health and deep recovery.',
     estimatedMins: 20,
     estimatedCalories: 110,
-    exercises: [
-      {
-        id: 'r1',
-        name: 'Cat-Cow Spine Flow',
-        category: 'Mobility',
-        equipmentRequired: 'Home',
-        formGuide: DEFAULT_FORM_GUIDE,
-        targetMuscles: ['Spine', 'Core'],
-        recommendedSets: 3,
-        recommendedReps: '12 reps',
-        ghostPerformance: { lastReps: 12, lastWeightKg: 0, lastDate: '3 days ago' },
-      },
-      {
-        id: 'r2',
-        name: 'World\'s Greatest Stretch',
-        category: 'Flexibility',
-        equipmentRequired: 'Home',
-        formGuide: DEFAULT_FORM_GUIDE,
-        targetMuscles: ['Hips', 'Thoracic Spine'],
-        recommendedSets: 3,
-        recommendedReps: '8 reps / side',
-        ghostPerformance: { lastReps: 8, lastWeightKg: 0, lastDate: '3 days ago' },
-      },
-    ],
+    exercises: [],
   },
   'Steady Flow': {
     id: 'steady-01',
@@ -118,48 +95,84 @@ export const ROUTINES_MAP: Record<VibeStage, WorkoutRoutine> = {
   },
 };
 
-// MASTER AI CALISTHENICS COACH RESPONSE GENERATOR
-export function generateCoachResponse(prompt: string, userContext: any): string {
-  const lower = prompt.toLowerCase();
-  const userName = userContext.name || 'Athlete';
-  const weight = userContext.weightKg || 78;
+// LIVE REAL-TIME GEMINI LLM API INTEGRATION
+export async function callRealLLMCoachAPI(prompt: string, userContext: any, customApiKey?: string): Promise<string> {
+  const apiKey = customApiKey || import.meta.env.VITE_GEMINI_API_KEY || '';
 
-  if (lower.includes('wrist') || lower.includes('pain') || lower.includes('joint')) {
-    return `🔥 Hey ${userName}! Wrist pain during Pike Push-Ups or Planche leans is very common when wrist extensors aren't warm. Try this:
-1. Warm up with 10 wrist circles & palm pulses on the floor.
-2. Turn your hands slightly outward (at 45°) to relieve compression on the carpal tunnel.
-3. Keep your fingers spread wide and claw the floor to distribute your body weight evenly!`;
+  const systemInstruction = `You are Sensei Goku, a elite Master Calisthenics Coach. You talk directly to the athlete:
+- Name: ${userContext.name || 'Athlete'}
+- Height: ${userContext.heightCm || 180}cm
+- Weight: ${userContext.weightKg || 78}kg
+- Target Physique: ${userContext.targetPhysique || 'Anime Aesthetic'}
+- Level: ${userContext.level || 5}
+
+Answer the user's question with deep biomechanical accuracy, progressive calisthenics leverage cues, and sports nutrition science. Keep your answer under 160 words, concise, formatted with clear bullet points and emojis. Be motivating, direct, and helpful!`;
+
+  if (apiKey) {
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [
+              {
+                role: 'user',
+                parts: [{ text: `${systemInstruction}\n\nUser Question: ${prompt}` }],
+              },
+            ],
+          }),
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) return text.trim();
+      }
+    } catch (e) {
+      console.warn('Gemini LLM API call error:', e);
+    }
   }
 
-  if (lower.includes('eat') || lower.includes('macro') || lower.includes('diet') || lower.includes('protein')) {
-    const targetProtein = Math.round(weight * 2); // 2g per kg
-    return `🥩 For your ${weight}kg target physique, your daily macronutrient baseline is:
-• Protein: ${targetProtein}g / day (Crucial for muscle recovery & low body fat)
-• Carbs: ~220g (Focus on rice, oats, sweet potatoes for training energy)
-• Healthy Fats: ~65g (Avocados, eggs, almonds)
-Pro Tip: Drink 3.5L of water daily to keep muscle bellies hydrated!`;
+  // Smart dynamic fallback if API key is not yet set
+  return generateDynamicSmartFallback(prompt, userContext);
+}
+
+function generateDynamicSmartFallback(prompt: string, userContext: any): string {
+  const lower = prompt.toLowerCase();
+  const name = userContext.name || 'Athlete';
+  const weight = userContext.weightKg || 78;
+
+  if (lower.includes('wrist') || lower.includes('pain') || lower.includes('elbow')) {
+    return `🔥 Hey ${name}! Joint/wrist discomfort during pushing exercises happens when forearms aren't pre-warmed.
+• Turn hands outward 45° to open carpal space.
+• Perform 10 palm pulses and wrist waves.
+• Spread fingers wide and claw into the ground to absorb force evenly!`;
+  }
+
+  if (lower.includes('eat') || lower.includes('diet') || lower.includes('food') || lower.includes('protein') || lower.includes('calories')) {
+    const protein = Math.round(weight * 2);
+    return `🥩 For your ${weight}kg target:
+• Daily Protein Goal: ${protein}g (Egg whites, chicken breast, Greek yogurt).
+• Carbs: ~220g for workout energy (Oats, rice, bananas).
+• Hydration: Drink 3.5L of water daily to maximize muscle pump!`;
   }
 
   if (lower.includes('muscle-up') || lower.includes('muscle up')) {
-    return `⚡ The Muscle-Up is 80% speed & transition, not just pull-up strength!
-1. Build explosive power: Practice Chest-to-Bar Pull-Ups where your lower ribs touch the bar.
-2. The False Grip: Curl your wrists over the bar so your palm heel sits directly on top.
-3. Drive knees slightly forward as you pull high to sweep your chest over the bar!`;
+    return `⚡ The Muscle-Up relies on explosive pull height:
+• Pull the bar down to your lower ribs, not just your chin.
+• Use the False Grip (wrist resting over the bar).
+• Whip your chest over the bar at the apex of the pull!`;
   }
 
-  if (lower.includes('planche') || lower.includes('tuck planche')) {
-    return `🤸 To unlock the Planche, straight-arm scapular protraction is key!
-1. Practice Tuck Planche holds: Aim for 5 sets of 12-15 seconds holds.
-2. Keep your arms locked 100% straight — do not bend at the elbows!
-3. Push your shoulder blades forward (protraction) and hollow your stomach. Move to Straddle Planche only when you can hold 15s comfortably!`;
+  if (lower.includes('planche')) {
+    return `🤸 For Planche mastery:
+• Lock elbows 100% straight — no bending!
+• Protracted shoulders (push shoulder blades away from each other).
+• Hold Tuck Planche for 5 sets of 12s before advancing!`;
   }
 
-  if (lower.includes('handstand') || lower.includes('hspu')) {
-    return `🤸 For Handstand Push-Ups (HSPU):
-1. Lower down in a tripod position: Head goes slightly forward of your hands, forming a triangle.
-2. Keep your elbows tucked in at 45 degrees, never flare them out wide.
-3. Press upward through your shoulders while keeping your core & legs zipped tight!`;
-  }
-
-  return `💪 Great question, ${userName}! In pure calisthenics, progressive overload comes from altering body leverage and tempo, not just adding weight. Focus on 3-second slow negatives, full range of motion, and maintaining tight core tension in every single rep!`;
+  return `💪 Hey ${name}! To progress in calisthenics, focus on progressive leverage (shifting body weight further forward or raising feet), strict 3-0-1 tempo, and full range of motion. Ask me about any specific move or nutrition goal!`;
 }
