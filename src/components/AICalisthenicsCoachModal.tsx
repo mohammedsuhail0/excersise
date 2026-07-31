@@ -22,17 +22,17 @@ export const AICalisthenicsCoachModal: React.FC<AICalisthenicsCoachModalProps> =
   onClose,
   user,
 }) => {
-  const [provider, setProvider] = useState<LLMProvider>('groq');
+  const [provider, setProvider] = useState<LLMProvider>('nvidia');
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
       sender: 'coach',
-      text: `OSS ${user.name}! I am your AI Calisthenics Sensei. Currently connected to Groq / NVIDIA / Gemini. Ask me ANY question!`,
+      text: `OSS ${user.name}! I am your AI Calisthenics Sensei powered by NVIDIA NIM (Llama 3.1 70B). Ask me ANY question!`,
       time: 'Just now',
     },
   ]);
   const [inputText, setInputText] = useState('');
-  const [apiKeyInput, setApiKeyInput] = useState(() => localStorage.getItem('aurafit_llm_api_key') || '');
+  const [apiKeyInput, setApiKeyInput] = useState(() => localStorage.getItem('aurafit_nvidia_api_key') || '');
   const [showKeyInput, setShowKeyInput] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -45,7 +45,7 @@ export const AICalisthenicsCoachModal: React.FC<AICalisthenicsCoachModalProps> =
 
   const handleSaveApiKey = (key: string) => {
     setApiKeyInput(key);
-    localStorage.setItem('aurafit_llm_api_key', key);
+    localStorage.setItem('aurafit_nvidia_api_key', key);
     setShowKeyInput(false);
   };
 
@@ -76,7 +76,7 @@ export const AICalisthenicsCoachModal: React.FC<AICalisthenicsCoachModalProps> =
       };
       setMessages((prev) => [...prev, coachMsg]);
     } catch (e) {
-      console.error(e);
+      console.error('Coach API call failed:', e);
     } finally {
       setIsTyping(false);
     }
@@ -101,8 +101,8 @@ export const AICalisthenicsCoachModal: React.FC<AICalisthenicsCoachModalProps> =
                 <h2 className="text-[14px] font-extrabold leading-tight">AI Calisthenics Sensei</h2>
                 <Sparkles className="w-3.5 h-3.5 text-amber-400" />
               </div>
-              <p className="text-[9px] text-orange-400 font-semibold uppercase tracking-wider">
-                {provider === 'groq' ? '⚡ Groq Llama 3.3 70B' : provider === 'nvidia' ? '🟢 NVIDIA NIM Llama 3.1' : '✨ Gemini 1.5 Flash'}
+              <p className="text-[9px] text-emerald-400 font-semibold uppercase tracking-wider">
+                {provider === 'nvidia' ? '🟢 NVIDIA NIM Llama 3.1 70B' : provider === 'groq' ? '⚡ Groq Llama 3.3 70B' : '✨ Gemini 1.5 Flash'}
               </p>
             </div>
           </div>
@@ -134,17 +134,6 @@ export const AICalisthenicsCoachModal: React.FC<AICalisthenicsCoachModalProps> =
             <button
               onClick={() => {
                 soundEngine.playTick();
-                setProvider('groq');
-              }}
-              className={`px-2 py-0.5 rounded-full font-bold transition-colors ${
-                provider === 'groq' ? 'bg-orange-500 text-white' : 'text-white/60 hover:text-white'
-              }`}
-            >
-              ⚡ Groq
-            </button>
-            <button
-              onClick={() => {
-                soundEngine.playTick();
                 setProvider('nvidia');
               }}
               className={`px-2 py-0.5 rounded-full font-bold transition-colors ${
@@ -152,6 +141,17 @@ export const AICalisthenicsCoachModal: React.FC<AICalisthenicsCoachModalProps> =
               }`}
             >
               🟢 NVIDIA
+            </button>
+            <button
+              onClick={() => {
+                soundEngine.playTick();
+                setProvider('groq');
+              }}
+              className={`px-2 py-0.5 rounded-full font-bold transition-colors ${
+                provider === 'groq' ? 'bg-orange-500 text-white' : 'text-white/60 hover:text-white'
+              }`}
+            >
+              ⚡ Groq
             </button>
             <button
               onClick={() => {
@@ -174,14 +174,14 @@ export const AICalisthenicsCoachModal: React.FC<AICalisthenicsCoachModalProps> =
               <span className="text-amber-400 font-bold">
                 {provider.toUpperCase()} API Key:
               </span>
-              <span className="text-[9px] text-white/50">Optional</span>
+              <span className="text-[9px] text-white/50">Optional Override</span>
             </div>
             <div className="flex gap-1">
               <input
                 type="password"
                 value={apiKeyInput}
                 onChange={(e) => handleSaveApiKey(e.target.value)}
-                placeholder={`Paste your ${provider.toUpperCase()} API key...`}
+                placeholder={`Paste your ${provider.toUpperCase()} API key (nvapi-...)...`}
                 className="flex-1 bg-white/10 border border-white/20 rounded-full px-3 py-1 text-[11px] outline-none text-white placeholder:text-white/40"
               />
               <button
@@ -232,7 +232,7 @@ export const AICalisthenicsCoachModal: React.FC<AICalisthenicsCoachModalProps> =
                 <Bot className="w-3.5 h-3.5" />
               </div>
               <div className="liquid-glass px-3 py-2 rounded-[18px] text-[11px] text-orange-400 flex items-center space-x-1.5 animate-pulse">
-                <span>Sensei ({provider.toUpperCase()}) is generating answer...</span>
+                <span>NVIDIA NIM (Llama 3.1 70B) is generating answer...</span>
               </div>
             </div>
           )}
@@ -274,7 +274,7 @@ export const AICalisthenicsCoachModal: React.FC<AICalisthenicsCoachModalProps> =
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-              placeholder={`Ask Sensei (${provider.toUpperCase()})...`}
+              placeholder={`Ask NVIDIA NIM (Llama 3.1 70B)...`}
               className="flex-1 bg-transparent text-white text-[12px] outline-none placeholder:text-white/40"
             />
             <button
