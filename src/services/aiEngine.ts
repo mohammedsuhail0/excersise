@@ -95,18 +95,18 @@ export const ROUTINES_MAP: Record<VibeStage, WorkoutRoutine> = {
   },
 };
 
-export type LLMProvider = 'nvidia' | 'groq' | 'gemini';
+export type LLMProvider = 'groq' | 'nvidia' | 'gemini';
 
-// 100% DIRECT LIVE NVIDIA NIM LLM ENGINE
+// 100% DIRECT LIVE GROQ LLM ENGINE (PRIMARY ULTRA-FAST LLAMA 3.3 70B)
 export async function callMultiProviderLLMCoachAPI(
   prompt: string,
   userContext: any,
-  provider: LLMProvider = 'nvidia',
+  provider: LLMProvider = 'groq',
   customApiKey?: string
 ): Promise<string> {
   const lowerPrompt = prompt.toLowerCase();
 
-  // 1. SPECIFIC MEDICAL EMERGENCY & INJURY SAFETY CHECK (EXCLUDES FITNESS "CUT" DIET GOAL)
+  // 1. SPECIFIC MEDICAL EMERGENCY & INJURY SAFETY CHECK
   const medicalEmergencyKeywords = [
     'bleeding', 'bleed', 'blood wound', 'deep cut', 'open wound', 'chest pain', 
     'dizziness', 'dizzy', 'fainted', 'faint', 'broken bone', 'fracture', 'dislocated', 'torn muscle', 'severe pain'
@@ -126,32 +126,36 @@ CRITICAL INSTRUCTIONS:
 - Give a direct, highly customized answer specifically addressing their question. Use bullet points and emojis. Keep under 120 words!
 - If the user asks for a meal plan, format 4 delicious high-protein meals (Breakfast, Lunch, Snack, Dinner) matching their calorie and macro goals!`;
 
-  const apiKey =
+  // 1. GROQ API (PRIMARY ULTRA-FAST ENGINE VIA ENV OR LOCALSTORAGE)
+  const groqApiKey =
     customApiKey ||
-    localStorage.getItem('aurafit_nvidia_api_key') ||
-    import.meta.env.VITE_NVIDIA_API_KEY ||
-    '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';
+    localStorage.getItem('aurafit_groq_api_key') ||
+    import.meta.env.VITE_GROQ_API_KEY ||
+    '';
 
-  const endpointsToTry = [
-    '/api/nvidia/v1/chat/completions',
-    'https://integrate.api.nvidia.com/v1/chat/completions',
+  if (!groqApiKey) {
+    return `⚠️ Groq API Key missing! Please set VITE_GROQ_API_KEY in your .env file or input bar.`;
+  }
+
+  const groqEndpoints = [
+    '/api/groq/openai/v1/chat/completions',
+    'https://api.groq.com/openai/v1/chat/completions',
   ];
 
-  const modelsToTry = [
-    'meta/llama-3.1-70b-instruct',
-    'nvidia/llama-3.1-nemotron-70b-instruct',
-    'meta/llama3-70b-instruct',
+  const groqModels = [
+    'llama-3.3-70b-versatile',
+    'llama-3.1-8b-instant',
   ];
 
   let lastError = '';
 
-  for (const endpoint of endpointsToTry) {
-    for (const model of modelsToTry) {
+  for (const endpoint of groqEndpoints) {
+    for (const model of groqModels) {
       try {
         const response = await fetch(endpoint, {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${apiKey.trim()}`,
+            Authorization: `Bearer ${groqApiKey.trim()}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
@@ -169,20 +173,20 @@ CRITICAL INSTRUCTIONS:
           const data = await response.json();
           const text = data?.choices?.[0]?.message?.content;
           if (text) {
-            console.log(`✅ NVIDIA NIM LLM Response received via ${endpoint} (${model})`);
+            console.log(`⚡ Groq LLM API Success via ${endpoint} (${model})`);
             return text.trim();
           }
         } else {
           const errBody = await response.text();
-          console.error(`❌ NVIDIA API (${endpoint}) HTTP ${response.status}:`, errBody);
+          console.error(`❌ Groq API (${endpoint}) HTTP ${response.status}:`, errBody);
           lastError = `HTTP ${response.status}: ${errBody}`;
         }
       } catch (e: any) {
-        console.error(`❌ NVIDIA API Fetch Error on ${endpoint}:`, e?.message);
+        console.error(`❌ Groq API Fetch Error on ${endpoint}:`, e?.message);
         lastError = e?.message || 'Network Fetch Error';
       }
     }
   }
 
-  return `⚠️ Direct NVIDIA NIM LLM Connection Error: ${lastError || 'Failed to reach integrate.api.nvidia.com'}. Please check your internet connection or API key.`;
+  return `⚠️ Direct Groq LLM Connection Error: ${lastError || 'Failed to reach api.groq.com'}. Please check your internet connection or API key.`;
 }
