@@ -258,8 +258,8 @@ export function App() {
 
   return (
     <div className={`h-screen h-[100dvh] w-full flex justify-center overflow-hidden selection:bg-none ${themeMode === 'light' ? 'light-mode bg-slate-100 text-slate-900' : 'bg-[#07090e] text-white'}`}>
-      {/* NATIVE MOBILE CONTAINER LOCKED TO 100vh ZERO SCROLL */}
-      <div className={`w-full max-w-md h-screen h-[100dvh] flex flex-col justify-between relative overflow-hidden transition-colors duration-300 p-3 ${themeMode === 'light' ? 'bg-slate-200' : 'bg-[#0b0f19]'}`}>
+      {/* NATIVE MOBILE CONTAINER LOCKED TO 390px COMPACT WIDTH */}
+      <div className={`w-full max-w-[390px] h-screen h-[100dvh] flex flex-col justify-between relative overflow-hidden transition-colors duration-300 p-2.5 ${themeMode === 'light' ? 'bg-slate-200' : 'bg-[#0b0f19]'}`}>
         
         {/* ATHLETIC BACKGROUND IMAGE */}
         <div
@@ -325,7 +325,7 @@ export function App() {
         </main>
 
         {/* LIQUID GLASS BOTTOM NAVIGATION DOCK */}
-        <nav className="w-full h-[46px] rounded-full liquid-glass flex items-center justify-around px-2 relative z-50 shrink-0 mt-1">
+        <nav className="w-full h-[44px] rounded-full liquid-glass flex items-center justify-around px-2 relative z-50 shrink-0 mt-1">
           {/* HOME TAB */}
           <button
             onClick={() => setActiveTab('vibe')}
