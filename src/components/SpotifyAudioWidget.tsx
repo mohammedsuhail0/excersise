@@ -101,7 +101,9 @@ export const SpotifyAudioWidget: React.FC = () => {
   const [spotifyToken, setSpotifyToken] = useState<string | null>(() => {
     return localStorage.getItem('spotify_access_token');
   });
-  const [spotifyProfile, setSpotifyProfile] = useState<{ displayName: string; imageUrl?: string } | null>(null);
+  const [spotifyProfile, setSpotifyProfile] = useState<{ displayName: string; imageUrl?: string } | null>(() => {
+    return localStorage.getItem('spotify_access_token') ? { displayName: 'Spotify Athlete' } : null;
+  });
   const [userPlaylists, setUserPlaylists] = useState<PlaylistOption[]>([]);
 
   // Web Audio Synth Beats Loop Ref
@@ -134,6 +136,7 @@ export const SpotifyAudioWidget: React.FC = () => {
           .then((data) => {
             if (data.access_token) {
               setSpotifyToken(data.access_token);
+              setSpotifyProfile({ displayName: 'Spotify Athlete' });
               localStorage.setItem('spotify_access_token', data.access_token);
               localStorage.removeItem('spotify_code_verifier');
               window.history.replaceState(null, '', window.location.pathname);
@@ -152,17 +155,22 @@ export const SpotifyAudioWidget: React.FC = () => {
     fetch('https://api.spotify.com/v1/me', {
       headers: { Authorization: `Bearer ${spotifyToken}` },
     })
-      .then((res) => (res.ok ? res.json() : null))
+      .then((res) => {
+        if (res.status === 401) {
+          // Token expired or invalid
+          setSpotifyToken(null);
+          setSpotifyProfile(null);
+          localStorage.removeItem('spotify_access_token');
+          return null;
+        }
+        return res.ok ? res.json() : null;
+      })
       .then((data) => {
         if (data) {
           setSpotifyProfile({
             displayName: data.display_name || 'Spotify Athlete',
             imageUrl: data.images?.[0]?.url,
           });
-        } else {
-          // Token expired
-          setSpotifyToken(null);
-          localStorage.removeItem('spotify_access_token');
         }
       })
       .catch(() => {});
