@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Footprints, Flame, MapPin, Clock, Award, X, Play, Pause, RotateCcw, Zap } from 'lucide-react';
+import { Footprints, Flame, MapPin, Clock, Award, X, Play, Pause, RotateCcw } from 'lucide-react';
 import { soundEngine } from '../services/soundEngine';
 
 interface StepCounterModalProps {
@@ -18,7 +18,6 @@ export const StepCounterModal: React.FC<StepCounterModalProps> = ({
   onUpdateSteps,
 }) => {
   const [isLiveTracking, setIsLiveTracking] = useState(false);
-  const [motionIntensity, setMotionIntensity] = useState<number>(0);
 
   // Motion Detection State Refs
   const lastStepTimeRef = useRef<number>(0);
@@ -47,9 +46,6 @@ export const StepCounterModal: React.FC<StepCounterModalProps> = ({
       const delta = Math.abs(mag - lastMagRef.current);
       lastMagRef.current = mag;
 
-      // Update UI motion intensity meter
-      setMotionIntensity(Math.min(100, Math.round(delta * 15)));
-
       // 3. Calibrated Human Walking/Running Stride Detection:
       if ((delta >= 1.1 || mag >= 10.6) && timeDelta >= 280) {
         lastStepTimeRef.current = now;
@@ -71,8 +67,6 @@ export const StepCounterModal: React.FC<StepCounterModalProps> = ({
           window.addEventListener('devicemotion', handleDeviceMotion);
         }
       }
-    } else {
-      setMotionIntensity(0);
     }
 
     return () => {
@@ -150,24 +144,6 @@ export const StepCounterModal: React.FC<StepCounterModalProps> = ({
               </span>
             </div>
           </div>
-
-          {/* REAL-TIME MOTION INTENSITY VISUALIZER BAR */}
-          {isLiveTracking && (
-            <div className="space-y-1 pt-1">
-              <div className="flex items-center justify-between text-[9.5px] font-bold text-white/70">
-                <span className="flex items-center gap-1">
-                  <Zap className="w-3 h-3 text-amber-400" /> Live Accelerometer Motion:
-                </span>
-                <span className="text-orange-400">{motionIntensity}%</span>
-              </div>
-              <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-orange-500 to-amber-400 transition-all duration-150"
-                  style={{ width: `${motionIntensity}%` }}
-                />
-              </div>
-            </div>
-          )}
 
           {/* PROGRESS PERCENT BADGE */}
           <div className="flex items-center justify-center space-x-2 text-[11px]">
