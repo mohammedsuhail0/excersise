@@ -10,7 +10,7 @@ interface MacroCalculatorModalProps {
   user: UserProfile;
 }
 
-type Goal = 'cut' | 'maintain' | 'bulk';
+type Goal = 'shred' | 'maintain' | 'bulk';
 type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'intense';
 
 export const MacroCalculatorModal: React.FC<MacroCalculatorModalProps> = ({
@@ -23,7 +23,7 @@ export const MacroCalculatorModal: React.FC<MacroCalculatorModalProps> = ({
   const [age, setAge] = useState<number>(22);
   const [gender, setGender] = useState<'male' | 'female'>('male');
   const [activity, setActivity] = useState<ActivityLevel>('moderate');
-  const [goal, setGoal] = useState<Goal>('cut');
+  const [goal, setGoal] = useState<Goal>('shred');
 
   const [aiMealPlan, setAiMealPlan] = useState<string>('');
   const [isGeneratingPlan, setIsGeneratingPlan] = useState<boolean>(false);
@@ -46,8 +46,8 @@ export const MacroCalculatorModal: React.FC<MacroCalculatorModalProps> = ({
   const tdee = Math.round(bmr * activityMultipliers[activity]);
 
   let targetCalories = tdee;
-  if (goal === 'cut') targetCalories = Math.round(tdee * 0.8); // 20% deficit
-  if (goal === 'bulk') targetCalories = Math.round(tdee * 1.15); // 15% surplus
+  if (goal === 'shred') targetCalories = Math.round(tdee * 0.8); // 20% deficit for Greek God aesthetic
+  if (goal === 'bulk') targetCalories = Math.round(tdee * 1.15); // 15% surplus for Titan bulk
 
   // Macro Calculation:
   // Protein: 2.2g per kg
@@ -57,19 +57,24 @@ export const MacroCalculatorModal: React.FC<MacroCalculatorModalProps> = ({
   const fatGrams = Math.round((targetCalories * 0.25) / 9);
   const carbGrams = Math.round((targetCalories - proteinGrams * 4 - fatGrams * 9) / 4);
 
-  const goalLabel = goal === 'cut' ? 'FAT LOSS DEFICIT' : goal === 'bulk' ? 'LEAN MUSCLE BULK' : 'MAINTENANCE';
+  const goalTitleMap: Record<Goal, string> = {
+    shred: 'SHREDDED (GREEK GOD)',
+    maintain: 'ATHLETIC FLOW',
+    bulk: 'TITAN BULK',
+  };
 
   const handleGenerateAIMealPlan = async () => {
     soundEngine.playTick();
     setIsGeneratingPlan(true);
     setAiMealPlan('');
 
-    const prompt = `Generate a high-protein 1-day calisthenics meal plan for a ${weightKg}kg ${gender} athlete:
-- Daily Target: ${targetCalories} kcal
-- Protein: ${proteinGrams}g | Carbs: ${carbGrams}g | Fats: ${fatGrams}g
-- Goal: ${goalLabel}
+    const prompt = `Generate a high-protein 1-day calisthenics meal plan for a ${weightKg}kg ${gender} athlete aiming for ${goalTitleMap[goal]}:
+- Daily Calorie Goal: ${targetCalories} kcal
+- Protein Target: ${proteinGrams} grams
+- Carbs Target: ${carbGrams} grams
+- Fats Target: ${fatGrams} grams
 
-Format with 4 meals (Breakfast, Lunch, Pre-Workout Snack, Dinner). Keep it concise, high-protein, delicious, and easy to prepare!`;
+Structure into 4 meals (Breakfast, Lunch, Pre-Workout Snack, Dinner). Keep it high-protein, clean, delicious, and concise!`;
 
     try {
       const planText = await callMultiProviderLLMCoachAPI(prompt, user, 'nvidia');
@@ -97,7 +102,7 @@ Format with 4 meals (Breakfast, Lunch, Pre-Workout Snack, Dinner). Keep it conci
                 <h2 className="text-[15px] font-extrabold leading-tight">Macro & TDEE Calculator</h2>
                 <Sparkles className="w-3.5 h-3.5 text-amber-400" />
               </div>
-              <p className="text-[9.5px] text-amber-400 font-semibold">Precision Bio-Nutrition Engine</p>
+              <p className="text-[9.5px] text-amber-400 font-semibold">Greek God Bio-Nutrition Engine</p>
             </div>
           </div>
 
@@ -120,7 +125,9 @@ Format with 4 meals (Breakfast, Lunch, Pre-Workout Snack, Dinner). Keep it conci
                 <Flame className="w-5 h-5 text-orange-500" />
                 {targetCalories} <span className="text-[10px] text-white/60">kcal</span>
               </span>
-              <span className="text-[8.5px] text-white/50 block capitalize">Goal: {goal}</span>
+              <span className="text-[8.5px] text-white/50 block font-bold uppercase truncate px-1">
+                {goalTitleMap[goal]}
+              </span>
             </div>
 
             <div className="liquid-glass p-3 rounded-2xl border border-white/15 text-center">
@@ -153,24 +160,47 @@ Format with 4 meals (Breakfast, Lunch, Pre-Workout Snack, Dinner). Keep it conci
           <div className="space-y-3 bg-black/40 p-3 rounded-2xl border border-white/10">
             {/* GOAL SELECTOR */}
             <div>
-              <label className="text-[10px] text-white/70 font-bold block mb-1">FITNESS GOAL</label>
+              <label className="text-[10px] text-white/70 font-bold block mb-1">PHYSIQUE TARGET GOAL</label>
               <div className="grid grid-cols-3 gap-1.5">
-                {(['cut', 'maintain', 'bulk'] as Goal[]).map((g) => (
-                  <button
-                    key={g}
-                    onClick={() => {
-                      soundEngine.playTick();
-                      setGoal(g);
-                    }}
-                    className={`py-1.5 rounded-xl text-[10.5px] font-extrabold uppercase transition-all ${
-                      goal === g
-                        ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md'
-                        : 'bg-white/5 text-white/60 hover:text-white'
-                    }`}
-                  >
-                    {g}
-                  </button>
-                ))}
+                <button
+                  onClick={() => {
+                    soundEngine.playTick();
+                    setGoal('shred');
+                  }}
+                  className={`py-1.5 rounded-xl text-[9.5px] font-extrabold uppercase transition-all truncate px-1 ${
+                    goal === 'shred'
+                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md'
+                      : 'bg-white/5 text-white/60 hover:text-white'
+                  }`}
+                >
+                  ⚡ GREEK GOD
+                </button>
+                <button
+                  onClick={() => {
+                    soundEngine.playTick();
+                    setGoal('maintain');
+                  }}
+                  className={`py-1.5 rounded-xl text-[9.5px] font-extrabold uppercase transition-all truncate px-1 ${
+                    goal === 'maintain'
+                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md'
+                      : 'bg-white/5 text-white/60 hover:text-white'
+                  }`}
+                >
+                  🧘 MAINTAIN
+                </button>
+                <button
+                  onClick={() => {
+                    soundEngine.playTick();
+                    setGoal('bulk');
+                  }}
+                  className={`py-1.5 rounded-xl text-[9.5px] font-extrabold uppercase transition-all truncate px-1 ${
+                    goal === 'bulk'
+                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md'
+                      : 'bg-white/5 text-white/60 hover:text-white'
+                  }`}
+                >
+                  🦍 TITAN BULK
+                </button>
               </div>
             </div>
 
