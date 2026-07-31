@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { X, Calculator, Utensils, Flame, Sparkles, RefreshCw, CheckCircle2 } from 'lucide-react';
-import { UserProfile } from '../types';
+import { X, Utensils, Flame, Sparkles, Scale, Ruler, Trophy, Bot, CheckCircle2, ChevronRight } from 'lucide-react';
+import { UserProfile, TargetPhysique } from '../types';
 import { callMultiProviderLLMCoachAPI } from '../services/aiEngine';
 import { soundEngine } from '../services/soundEngine';
 
@@ -10,53 +10,51 @@ interface MacroCalculatorModalProps {
   user: UserProfile;
 }
 
-type Goal = 'shred' | 'maintain' | 'bulk';
-type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'intense';
-
 export const MacroCalculatorModal: React.FC<MacroCalculatorModalProps> = ({
   isOpen,
   onClose,
   user,
 }) => {
-  const [weightKg, setWeightKg] = useState<number>(user.weightKg || 78);
-  const [heightCm, setHeightCm] = useState<number>(user.heightCm || 180);
-  const [age, setAge] = useState<number>(22);
+  const [weightKg, setWeightKg] = useState<number>(user.weightKg || 70);
+  const [heightCm, setHeightCm] = useState<number>(user.heightCm || 175);
+  const [age, setAge] = useState<number>(24);
   const [gender, setGender] = useState<'male' | 'female'>('male');
-  const [activity, setActivity] = useState<ActivityLevel>('moderate');
-  const [goal, setGoal] = useState<Goal>('shred');
+  const [activityLevel, setActivityLevel] = useState<'sedentary' | 'moderate' | 'active'>('moderate');
+  const [goal, setGoal] = useState<'cut' | 'maintain' | 'bulk'>('maintain');
 
   const [aiMealPlan, setAiMealPlan] = useState<string>('');
   const [isGeneratingPlan, setIsGeneratingPlan] = useState<boolean>(false);
 
   if (!isOpen) return null;
 
-  // Mifflin-St Jeor Equation for BMR
-  const bmr =
-    gender === 'male'
-      ? 10 * weightKg + 6.25 * heightCm - 5 * age + 5
-      : 10 * weightKg + 6.25 * heightCm - 5 * age - 161;
+  // Calculate Mifflin-St Jeor BMR & TDEE
+  let bmr = 10 * weightKg + 6.25 * heightCm - 5 * age;
+  bmr += gender === 'male' ? 5 : -161;
+  bmr = Math.round(bmr);
 
-  const activityMultipliers: Record<ActivityLevel, number> = {
+  const multipliers: Record<string, number> = {
     sedentary: 1.2,
-    light: 1.375,
     moderate: 1.55,
-    intense: 1.725,
+    active: 1.75,
   };
-
-  const tdee = Math.round(bmr * activityMultipliers[activity]);
+  const tdee = Math.round(bmr * (multipliers[activityLevel] || 1.55));
 
   let targetCalories = tdee;
-  if (goal === 'shred') targetCalories = Math.round(tdee * 0.8);
+  if (goal === 'cut') targetCalories = Math.round(tdee * 0.8);
   if (goal === 'bulk') targetCalories = Math.round(tdee * 1.15);
 
   const proteinGrams = Math.round(weightKg * 2.2);
-  const fatGrams = Math.round((targetCalories * 0.25) / 9);
-  const carbGrams = Math.round((targetCalories - proteinGrams * 4 - fatGrams * 9) / 4);
+  const fatGrams = Math.round(weightKg * 1.0);
 
-  const goalTitleMap: Record<Goal, string> = {
-    shred: 'SHREDDED (GREEK GOD)',
-    maintain: 'ATHLETIC FLOW',
-    bulk: 'TITAN BULK',
+  const proteinCalories = proteinGrams * 4;
+  const fatCalories = fatGrams * 9;
+  const remainingCalories = Math.max(0, targetCalories - (proteinCalories + fatCalories));
+  const carbGrams = Math.round(remainingCalories / 4);
+
+  const goalTitleMap = {
+    cut: 'Fat Loss Cut',
+    maintain: 'Recomp & Maintenance',
+    bulk: 'Lean Muscle Bulk',
   };
 
   const handleGenerateAIMealPlan = async () => {
@@ -73,7 +71,7 @@ export const MacroCalculatorModal: React.FC<MacroCalculatorModalProps> = ({
 Structure into 4 meals (Breakfast, Lunch, Pre-Workout Snack, Dinner). Keep it high-protein, clean, delicious, and concise!`;
 
     try {
-      const planText = await callMultiProviderLLMCoachAPI(prompt, user, 'nvidia');
+      const planText = await callMultiProviderLLMCoachAPI(prompt, user);
       soundEngine.playSetCompleteChime();
       setAiMealPlan(planText);
     } catch (e) {
@@ -85,206 +83,135 @@ Structure into 4 meals (Breakfast, Lunch, Pre-Workout Snack, Dinner). Keep it hi
 
   return (
     <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 animate-fade-up">
-      <div className="w-full max-w-[360px] max-h-[580px] bg-[#0f1420]/95 border border-amber-500/40 rounded-[28px] flex flex-col justify-between overflow-hidden shadow-2xl relative text-white">
+      <div className="w-full max-w-sm h-[92vh] max-h-[640px] bg-[#0f1420]/95 border border-white/15 rounded-[32px] p-4 flex flex-col justify-between shadow-2xl relative text-white">
         
-        {/* COMPACT HEADER */}
-        <div className="p-3 border-b border-white/10 flex items-center justify-between bg-black/40 backdrop-blur-md shrink-0">
+        {/* HEADER */}
+        <div className="flex items-center justify-between border-b border-white/10 pb-2.5 shrink-0">
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-white shadow-md border border-white/20">
-              <Calculator className="w-4 h-4" />
+            <div className="w-8.5 h-8.5 rounded-full bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center text-white shadow-md">
+              <Utensils className="w-4.5 h-4.5" />
             </div>
             <div>
-              <div className="flex items-center space-x-1">
-                <h2 className="text-[13.5px] font-extrabold leading-tight">Macro & TDEE Calculator</h2>
-                <Sparkles className="w-3 h-3 text-amber-400" />
-              </div>
-              <p className="text-[9px] text-amber-400 font-semibold">Precision Bio-Nutrition Engine</p>
+              <h2 className="text-[15px] font-extrabold leading-tight">Bio-Nutrition Macro Calculator</h2>
+              <p className="text-[10px] text-orange-400 font-semibold uppercase tracking-wider">
+                Mifflin-St Jeor TDEE Engine
+              </p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="w-6.5 h-6.5 rounded-full liquid-glass flex items-center justify-center text-white/70 hover:text-white"
+            className="w-7 h-7 rounded-full liquid-glass flex items-center justify-center text-white/70 hover:text-white"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* SCROLLABLE FORM & STATS */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-3 no-scrollbar">
+        {/* CALCULATOR CONTROLS & RESULT DISPLAY */}
+        <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 my-2 pr-1">
           
-          {/* STATS CARDS SUMMARY */}
-          <div className="grid grid-cols-2 gap-1.5">
-            <div className="liquid-glass p-2.5 rounded-xl border border-amber-500/30 text-center">
-              <span className="text-[8.5px] text-amber-400/80 font-bold uppercase tracking-wider block">Daily Calories</span>
-              <span className="text-xl font-black text-amber-400 flex items-center justify-center gap-0.5">
-                <Flame className="w-4 h-4 text-orange-500" />
-                {targetCalories} <span className="text-[9px] text-white/60">kcal</span>
-              </span>
-              <span className="text-[8px] text-white/50 block font-bold uppercase truncate px-0.5">
-                {goalTitleMap[goal]}
-              </span>
-            </div>
-
-            <div className="liquid-glass p-2.5 rounded-xl border border-white/15 text-center">
-              <span className="text-[8.5px] text-white/60 font-bold uppercase tracking-wider block">TDEE Maintenance</span>
-              <span className="text-xl font-black text-white">{tdee}</span>
-              <span className="text-[8px] text-emerald-400 block">BMR: {Math.round(bmr)} kcal</span>
-            </div>
-          </div>
-
-          {/* MACRO BREAKDOWN PILLS */}
-          <div className="liquid-glass p-2.5 rounded-xl border border-white/10 space-y-1.5">
-            <span className="text-[9.5px] font-extrabold text-white/80 uppercase tracking-wider block">Target Macro Breakdown</span>
-            <div className="grid grid-cols-3 gap-1.5 text-center">
-              <div className="bg-orange-500/20 border border-orange-500/40 p-1.5 rounded-lg">
-                <span className="text-[8.5px] text-orange-300 font-bold block">Protein</span>
-                <span className="text-sm font-black text-white">{proteinGrams}g</span>
-              </div>
-              <div className="bg-amber-500/20 border border-amber-500/40 p-1.5 rounded-lg">
-                <span className="text-[8.5px] text-amber-300 font-bold block">Carbs</span>
-                <span className="text-sm font-black text-white">{carbGrams}g</span>
-              </div>
-              <div className="bg-emerald-500/20 border border-emerald-500/40 p-1.5 rounded-lg">
-                <span className="text-[8.5px] text-emerald-300 font-bold block">Fats</span>
-                <span className="text-sm font-black text-white">{fatGrams}g</span>
-              </div>
-            </div>
-          </div>
-
-          {/* INPUT FORM CONTROLS */}
-          <div className="space-y-2.5 bg-black/40 p-2.5 rounded-xl border border-white/10">
-            {/* GOAL SELECTOR */}
+          {/* TDEE & MACRO RESULTS CARD */}
+          <div className="liquid-glass rounded-[24px] p-3.5 border border-orange-500/30 text-center space-y-2 relative overflow-hidden">
             <div>
-              <label className="text-[9.5px] text-white/70 font-bold block mb-1">PHYSIQUE GOAL</label>
-              <div className="grid grid-cols-3 gap-1">
-                <button
-                  onClick={() => {
-                    soundEngine.playTick();
-                    setGoal('shred');
-                  }}
-                  className={`py-1 rounded-lg text-[9px] font-extrabold uppercase transition-all truncate px-0.5 ${
-                    goal === 'shred'
-                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md'
-                      : 'bg-white/5 text-white/60 hover:text-white'
-                  }`}
-                >
-                  ⚡ GREEK GOD
-                </button>
-                <button
-                  onClick={() => {
-                    soundEngine.playTick();
-                    setGoal('maintain');
-                  }}
-                  className={`py-1 rounded-lg text-[9px] font-extrabold uppercase transition-all truncate px-0.5 ${
-                    goal === 'maintain'
-                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md'
-                      : 'bg-white/5 text-white/60 hover:text-white'
-                  }`}
-                >
-                  🧘 MAINTAIN
-                </button>
-                <button
-                  onClick={() => {
-                    soundEngine.playTick();
-                    setGoal('bulk');
-                  }}
-                  className={`py-1 rounded-lg text-[9px] font-extrabold uppercase transition-all truncate px-0.5 ${
-                    goal === 'bulk'
-                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md'
-                      : 'bg-white/5 text-white/60 hover:text-white'
-                  }`}
-                >
-                  🦍 TITAN BULK
-                </button>
-              </div>
+              <span className="text-[10px] font-extrabold text-orange-400 uppercase tracking-widest block">
+                Target Daily Energy
+              </span>
+              <h3 className="text-3xl font-black text-white leading-none mt-1">
+                {targetCalories.toLocaleString()} <span className="text-sm font-bold text-orange-400">kcal/day</span>
+              </h3>
+              <p className="text-[10px] text-white/60 font-medium mt-1">
+                BMR: {bmr.toLocaleString()} kcal • TDEE: {tdee.toLocaleString()} kcal
+              </p>
             </div>
 
-            {/* WEIGHT & HEIGHT */}
-            <div className="grid grid-cols-2 gap-1.5">
-              <div>
-                <label className="text-[9px] text-white/70 font-bold block mb-0.5">WEIGHT (KG)</label>
+            {/* TRIPLE MACRO CARDS */}
+            <div className="grid grid-cols-3 gap-1.5 pt-1">
+              <div className="bg-orange-500/15 border border-orange-500/30 rounded-2xl p-2 text-center">
+                <span className="text-[14px] font-black text-orange-400 block">{proteinGrams}g</span>
+                <span className="text-[9px] text-white/60 font-bold block uppercase">Protein</span>
+              </div>
+              <div className="bg-amber-500/15 border border-amber-500/30 rounded-2xl p-2 text-center">
+                <span className="text-[14px] font-black text-amber-400 block">{carbGrams}g</span>
+                <span className="text-[9px] text-white/60 font-bold block uppercase">Carbs</span>
+              </div>
+              <div className="bg-yellow-500/15 border border-yellow-500/30 rounded-2xl p-2 text-center">
+                <span className="text-[14px] font-black text-yellow-400 block">{fatGrams}g</span>
+                <span className="text-[9px] text-white/60 font-bold block uppercase">Fats</span>
+              </div>
+            </div>
+          </div>
+
+          {/* INPUT FORM FIELDS */}
+          <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <label className="text-[9.5px] font-bold text-white/70 uppercase">Weight (kg)</label>
                 <input
                   type="number"
                   value={weightKg}
                   onChange={(e) => setWeightKg(Number(e.target.value))}
-                  className="w-full bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-[11px] text-white outline-none font-bold text-center"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-[12px] text-white focus:outline-none focus:border-orange-500"
                 />
               </div>
-
-              <div>
-                <label className="text-[9px] text-white/70 font-bold block mb-0.5">HEIGHT (CM)</label>
+              <div className="space-y-1">
+                <label className="text-[9.5px] font-bold text-white/70 uppercase">Height (cm)</label>
                 <input
                   type="number"
                   value={heightCm}
                   onChange={(e) => setHeightCm(Number(e.target.value))}
-                  className="w-full bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-[11px] text-white outline-none font-bold text-center"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-[12px] text-white focus:outline-none focus:border-orange-500"
                 />
               </div>
             </div>
 
-            {/* AGE & ACTIVITY */}
-            <div className="grid grid-cols-2 gap-1.5">
-              <div>
-                <label className="text-[9px] text-white/70 font-bold block mb-0.5">AGE</label>
-                <input
-                  type="number"
-                  value={age}
-                  onChange={(e) => setAge(Number(e.target.value))}
-                  className="w-full bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-[11px] text-white outline-none font-bold text-center"
-                />
-              </div>
-
-              <div>
-                <label className="text-[9px] text-white/70 font-bold block mb-0.5">ACTIVITY</label>
-                <select
-                  value={activity}
-                  onChange={(e) => setActivity(e.target.value as ActivityLevel)}
-                  className="w-full bg-white/10 border border-white/20 rounded-lg px-1.5 py-1 text-[10px] text-white outline-none font-bold capitalize"
-                >
-                  <option value="sedentary" className="bg-[#0f1420] text-white">Sedentary</option>
-                  <option value="light" className="bg-[#0f1420] text-white">Light (1-3 days)</option>
-                  <option value="moderate" className="bg-[#0f1420] text-white">Moderate (3-5 days)</option>
-                  <option value="intense" className="bg-[#0f1420] text-white">Intense (6-7 days)</option>
-                </select>
+            {/* GOAL SELECTION PILLS */}
+            <div className="space-y-1">
+              <label className="text-[9.5px] font-bold text-white/70 uppercase">Fitness Goal</label>
+              <div className="grid grid-cols-3 gap-1 p-1 liquid-glass rounded-2xl border border-white/10">
+                {(['cut', 'maintain', 'bulk'] as const).map((g) => (
+                  <button
+                    key={g}
+                    onClick={() => {
+                      soundEngine.playTick();
+                      setGoal(g);
+                    }}
+                    className={`py-1.5 rounded-xl text-[10px] font-extrabold uppercase transition-all ${
+                      goal === g
+                        ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md'
+                        : 'text-white/60 hover:text-white'
+                    }`}
+                  >
+                    {g}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
 
-          {/* MEAL PLAN GENERATOR BUTTON */}
-          <button
-            onClick={handleGenerateAIMealPlan}
-            disabled={isGeneratingPlan}
-            className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 text-white font-extrabold text-[11px] shadow-lg hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center space-x-1.5 border border-white/20 disabled:opacity-50"
-          >
-            {isGeneratingPlan ? (
-              <>
-                <RefreshCw className="w-3.5 h-3.5 animate-spin text-white" />
-                <span>Crafting Your Custom Meal Plan...</span>
-              </>
-            ) : (
-              <>
-                <Utensils className="w-3.5 h-3.5 text-white" />
-                <span>Generate Personal Bio-Meal Plan</span>
-                <Sparkles className="w-3 h-3 text-amber-200" />
-              </>
-            )}
-          </button>
+          {/* AI MEAL PLAN GENERATION */}
+          <div className="pt-2 border-t border-white/10 space-y-2">
+            <button
+              onClick={handleGenerateAIMealPlan}
+              disabled={isGeneratingPlan}
+              className="w-full py-2.5 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[11px] font-extrabold uppercase shadow-lg hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center space-x-1.5 disabled:opacity-50"
+            >
+              <Bot className="w-4 h-4" />
+              <span>{isGeneratingPlan ? 'Sensei AI Generating Meal Plan...' : 'Generate AI Meal Plan'}</span>
+            </button>
 
-          {/* GENERATED MEAL PLAN DISPLAY */}
-          {aiMealPlan && (
-            <div className="liquid-glass p-3 rounded-xl border border-amber-500/40 space-y-1.5 animate-fade-up">
-              <div className="flex items-center space-x-1.5 text-amber-400">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span className="text-[10px] font-extrabold">Your Personalized Bio-Nutrition Plan</span>
+            {aiMealPlan && (
+              <div className="liquid-glass rounded-[20px] p-3 border border-orange-500/30 text-[11px] leading-relaxed text-white/90 whitespace-pre-wrap space-y-1 animate-fade-up">
+                <div className="flex items-center space-x-1 text-orange-400 font-bold text-[11px] mb-1">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Sensei High-Protein Meal Plan</span>
+                </div>
+                <div>{aiMealPlan}</div>
               </div>
-              <p className="text-[10.5px] leading-relaxed text-white/90 whitespace-pre-line font-medium bg-black/40 p-2.5 rounded-lg border border-white/10">
-                {aiMealPlan}
-              </p>
-            </div>
-          )}
+            )}
+          </div>
 
         </div>
+
       </div>
     </div>
   );

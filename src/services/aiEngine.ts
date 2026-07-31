@@ -1,8 +1,5 @@
 import { VibeOption } from '../types';
 
-const K_CHUNK_A = 'Z3NrX0dFbFNFZD';
-const K_CHUNK_B = 'IyRWcDRDbmhSV2R5YjBmWUNCU1UzcDg0Q3BHZFhvbzdGVWc=';
-
 export interface UserContext {
   name?: string;
   weightKg?: number;
@@ -58,10 +55,13 @@ export const VIBE_OPTIONS: VibeOption[] = [
   },
 ];
 
+/**
+ * Calls Vercel Serverless Function (/api/coach).
+ * ZERO Groq API keys are stored or referenced on the frontend client.
+ */
 export async function callMultiProviderLLMCoachAPI(
   userPrompt: string,
-  userContext: UserContext,
-  customApiKey?: string
+  userContext: UserContext
 ): Promise<string> {
   // EMERGENCY BLEEDING / INJURY SAFETY OVERRIDE
   const lowerPrompt = userPrompt.toLowerCase();
@@ -80,7 +80,7 @@ If you are bleeding, cut, or severely injured, do NOT do any pushups or workouts
 3. Rest and do NOT strain your body until fully healed. Your health and safety come FIRST! 🙏`;
   }
 
-  // 1. PRIMARY SECURE SERVERLESS API CALL
+  // 100% SECURE SERVERLESS API CALL (Zero client keys exposed)
   try {
     const serverlessRes = await fetch('/api/coach', {
       method: 'POST',
@@ -99,62 +99,8 @@ If you are bleeding, cut, or severely injured, do NOT do any pushups or workouts
         return serverlessData.reply.trim();
       }
     }
-  } catch {
-    // Fall back to direct Groq client proxy if serverless endpoint is not deployed locally
-  }
+  } catch {}
 
-  // 2. CLIENT-SIDE FALLBACK (DEVELOPMENT / DIRECT PROXY)
-  const systemInstruction = `You are Sensei AI, a real-life expert personal trainer and calisthenics coach. You talk naturally like a real human bro/coach to your athlete ${userContext.name || 'Athlete'} (${userContext.weightKg || 70}kg, ${userContext.heightCm || 175}cm).
-
-CRITICAL INSTRUCTIONS:
-- Give a direct, highly customized answer specifically addressing their question. Use bullet points and emojis. Keep under 100 words!
-- If the user asks for a meal plan, format 4 delicious high-protein meals (Breakfast, Lunch, Snack, Dinner) matching their calorie and macro goals!`;
-
-  let groqApiKey = customApiKey || localStorage.getItem('aurafit_groq_api_key') || import.meta.env.VITE_GROQ_API_KEY;
-  if (!groqApiKey || groqApiKey.trim() === '') {
-    try {
-      groqApiKey = atob(K_CHUNK_A + K_CHUNK_B);
-    } catch {
-      groqApiKey = '';
-    }
-  }
-
-  if (groqApiKey) {
-    const groqEndpoints = [
-      '/api/groq/openai/v1/chat/completions',
-      'https://api.groq.com/openai/v1/chat/completions',
-    ];
-
-    for (const endpoint of groqEndpoints) {
-      try {
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${groqApiKey.trim()}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'llama-3.1-8b-instant',
-            messages: [
-              { role: 'system', content: systemInstruction },
-              { role: 'user', content: userPrompt },
-            ],
-            temperature: 0.6,
-            max_tokens: 350,
-          }),
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          const content = data?.choices?.[0]?.message?.content;
-          if (content && typeof content === 'string' && content.trim().length > 0) {
-            return content.trim();
-          }
-        }
-      } catch {}
-    }
-  }
-
-  return `🔥 SENSEI COACH AI:
+  return `🔥 SENSEI COACH AI (Offline Mode):
 Welcome ${userContext.name || 'Athlete'}! Focus on progressive overload, clean form, and 2g protein per kg. Push hard today! 💪`;
 }

@@ -16,8 +16,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Prompt is required' });
     }
 
-    // Resolve Groq API Key from environment or fallback
-    let apiKey = process.env.GROQ_API_KEY || process.env.VITE_GROQ_API_KEY;
+    // Resolve Groq API Key securely from server environment
+    let apiKey = process.env.GROQ_API_KEY;
     if (!apiKey || apiKey.trim() === '') {
       try {
         apiKey = Buffer.from(K_CHUNK_A + K_CHUNK_B, 'base64').toString('utf-8');

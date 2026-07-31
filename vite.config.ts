@@ -12,17 +12,6 @@ export default defineConfig({
   server: {
     port: 3000,
     open: true,
-    proxy: {
-      '/api/groq': {
-        target: 'https://api.groq.com',
-        changeOrigin: true,
-        secure: false,
-        rewrite: (path) => path.replace(/^\/api\/groq/, ''),
-        headers: {
-          'Origin': 'https://api.groq.com',
-        }
-      },
-    },
   },
   test: {
     globals: true,

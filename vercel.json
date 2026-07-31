@@ -5,10 +5,6 @@
       "destination": "/api/coach.ts"
     },
     {
-      "source": "/api/groq/(.*)",
-      "destination": "https://api.groq.com/$1"
-    },
-    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
