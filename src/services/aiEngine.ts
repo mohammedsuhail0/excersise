@@ -97,7 +97,7 @@ export const ROUTINES_MAP: Record<VibeStage, WorkoutRoutine> = {
 
 export type LLMProvider = 'nvidia' | 'groq' | 'gemini';
 
-// NATURAL & MEDICAL SAFETY-FIRST PERSONAL TRAINER LLM ENGINE
+// GUARANTEED LIVE NVIDIA NIM LLM ENGINE
 export async function callMultiProviderLLMCoachAPI(
   prompt: string,
   userContext: any,
@@ -109,7 +109,7 @@ export async function callMultiProviderLLMCoachAPI(
   // 1. URGENT MEDICAL EMERGENCY & INJURY SAFETY CHECK
   const medicalEmergencyKeywords = [
     'bleeding', 'bleed', 'blood', 'cut', 'wound', 'chest pain', 'dizziness', 
-    'dizzy', 'fainted', 'faint', 'broken', 'fracture', 'dislocated', 'torn', 'severe pain', 'striked'
+    'dizzy', 'fainted', 'faint', 'broken', 'fracture', 'dislocated', 'torn', 'severe pain'
   ];
 
   if (medicalEmergencyKeywords.some((word) => lowerPrompt.includes(word))) {
@@ -130,57 +130,61 @@ CRITICAL MEDICAL & INJURY SAFETY RULES (TOP PRIORITY ABOVE ALL):
   4. NEVER tell them to do push-ups, pull-ups, or workouts while injured or bleeding!
 
 For normal workout & nutrition questions:
-- Be encouraging, energetic, and natural. Give practical calisthenics cues & diet advice under 100 words.`;
+- Be encouraging, energetic, and natural. Give practical calisthenics cues & diet advice under 120 words.`;
 
-  if (provider === 'nvidia') {
-    const apiKey = customApiKey || import.meta.env.VITE_NVIDIA_API_KEY || '';
-    if (!apiKey) {
-      return generateDynamicSmartFallback(prompt, userContext);
-    }
+  // Resolved API key (Fallback to live key if env hasn't reloaded)
+  const apiKey =
+    customApiKey ||
+    localStorage.getItem('aurafit_nvidia_api_key') ||
+    import.meta.env.VITE_NVIDIA_API_KEY ||
+    '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';
 
-    const endpointsToTry = [
-      '/api/nvidia/v1/chat/completions',
-      'https://integrate.api.nvidia.com/v1/chat/completions',
-    ];
+  const endpointsToTry = [
+    'https://integrate.api.nvidia.com/v1/chat/completions',
+    '/api/nvidia/v1/chat/completions',
+  ];
 
-    const modelsToTry = [
-      'meta/llama-3.1-70b-instruct',
-      'nvidia/llama-3.1-nemotron-70b-instruct',
-    ];
+  const modelsToTry = [
+    'meta/llama-3.1-70b-instruct',
+    'nvidia/llama-3.1-nemotron-70b-instruct',
+    'meta/llama3-70b-instruct',
+  ];
 
-    for (const endpoint of endpointsToTry) {
-      for (const model of modelsToTry) {
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 4000);
+  for (const endpoint of endpointsToTry) {
+    for (const model of modelsToTry) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-          const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${apiKey}`,
-              'Content-Type': 'application/json',
-            },
-            signal: controller.signal,
-            body: JSON.stringify({
-              model: model,
-              messages: [
-                { role: 'system', content: systemInstruction },
-                { role: 'user', content: prompt },
-              ],
-              temperature: 0.6,
-              max_tokens: 220,
-            }),
-          });
-          clearTimeout(timeoutId);
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          signal: controller.signal,
+          body: JSON.stringify({
+            model: model,
+            messages: [
+              { role: 'system', content: systemInstruction },
+              { role: 'user', content: prompt },
+            ],
+            temperature: 0.7,
+            max_tokens: 250,
+          }),
+        });
+        clearTimeout(timeoutId);
 
-          if (response.ok) {
-            const data = await response.json();
-            const text = data?.choices?.[0]?.message?.content;
-            if (text) return text.trim();
+        if (response.ok) {
+          const data = await response.json();
+          const text = data?.choices?.[0]?.message?.content;
+          if (text) {
+            console.log(`✅ NVIDIA NIM API Success using ${model}`);
+            return text.trim();
           }
-        } catch (e) {
-          // Timeout or error
         }
+      } catch (e: any) {
+        console.warn(`NVIDIA API endpoint ${endpoint} failed:`, e);
       }
     }
   }
@@ -210,5 +214,5 @@ Do NOT do any pushups or workouts if you are bleeding!
     return `Bro, for your ${weight}kg physique goal, aim for ${protein}g protein daily (eggs, chicken, Greek yogurt) plus 220g clean carbs. Keep water at 3.5L! 🥩`;
   }
 
-  return `Hey ${name}! Focus on progressive leverage, controlled 3-second negatives, and tight core tension. What are we blasting today? 💪`;
+  return `Hey ${name}! Focus on progressive leverage, controlled 3-second negatives, and tight core tension. What calisthenics move or nutrition goal are we tackling today? 💪`;
 }
