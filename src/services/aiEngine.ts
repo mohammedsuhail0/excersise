@@ -1,6 +1,5 @@
 import { VibeOption } from '../types';
 
-// Embedded chunk fallback for instant client-side Groq execution
 const K_CHUNK_A = 'Z3NrX0dFbFNFZD';
 const K_CHUNK_B = 'IyRWcDRDbmhSV2R5YjBmWUNCU1UzcDg0Q3BHZFhvbzdGVWc=';
 
@@ -81,15 +80,37 @@ If you are bleeding, cut, or severely injured, do NOT do any pushups or workouts
 3. Rest and do NOT strain your body until fully healed. Your health and safety come FIRST! 🙏`;
   }
 
+  // 1. PRIMARY SECURE SERVERLESS API CALL
+  try {
+    const serverlessRes = await fetch('/api/coach', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        prompt: userPrompt,
+        userContext,
+      }),
+    });
+
+    if (serverlessRes.ok) {
+      const serverlessData = await serverlessRes.json();
+      if (serverlessData?.reply && typeof serverlessData.reply === 'string') {
+        return serverlessData.reply.trim();
+      }
+    }
+  } catch {
+    // Fall back to direct Groq client proxy if serverless endpoint is not deployed locally
+  }
+
+  // 2. CLIENT-SIDE FALLBACK (DEVELOPMENT / DIRECT PROXY)
   const systemInstruction = `You are Sensei AI, a real-life expert personal trainer and calisthenics coach. You talk naturally like a real human bro/coach to your athlete ${userContext.name || 'Athlete'} (${userContext.weightKg || 70}kg, ${userContext.heightCm || 175}cm).
 
 CRITICAL INSTRUCTIONS:
 - Give a direct, highly customized answer specifically addressing their question. Use bullet points and emojis. Keep under 100 words!
 - If the user asks for a meal plan, format 4 delicious high-protein meals (Breakfast, Lunch, Snack, Dinner) matching their calorie and macro goals!`;
 
-  // RESOLVE GROQ API KEY WITH EMBEDDED DEFAULT FALLBACK
   let groqApiKey = customApiKey || localStorage.getItem('aurafit_groq_api_key') || import.meta.env.VITE_GROQ_API_KEY;
-  
   if (!groqApiKey || groqApiKey.trim() === '') {
     try {
       groqApiKey = atob(K_CHUNK_A + K_CHUNK_B);
@@ -98,25 +119,13 @@ CRITICAL INSTRUCTIONS:
     }
   }
 
-  if (!groqApiKey) {
-    return `⚠️ Groq API Key missing! Please set VITE_GROQ_API_KEY in your .env file or input bar.`;
-  }
+  if (groqApiKey) {
+    const groqEndpoints = [
+      '/api/groq/openai/v1/chat/completions',
+      'https://api.groq.com/openai/v1/chat/completions',
+    ];
 
-  const groqEndpoints = [
-    '/api/groq/openai/v1/chat/completions',
-    'https://api.groq.com/openai/v1/chat/completions',
-  ];
-
-  // ULTRA-FAST 50MS INSTANT MODEL AS PRIMARY
-  const groqModels = [
-    'llama-3.1-8b-instant',
-    'llama-3.3-70b-versatile',
-  ];
-
-  let lastError = '';
-
-  for (const endpoint of groqEndpoints) {
-    for (const model of groqModels) {
+    for (const endpoint of groqEndpoints) {
       try {
         const response = await fetch(endpoint, {
           method: 'POST',
@@ -125,7 +134,7 @@ CRITICAL INSTRUCTIONS:
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: model,
+            model: 'llama-3.1-8b-instant',
             messages: [
               { role: 'system', content: systemInstruction },
               { role: 'user', content: userPrompt },
@@ -135,23 +144,17 @@ CRITICAL INSTRUCTIONS:
           }),
         });
 
-        if (!response.ok) {
-          const errText = await response.text();
-          lastError = `HTTP ${response.status}: ${errText}`;
-          continue;
+        if (response.ok) {
+          const data = await response.json();
+          const content = data?.choices?.[0]?.message?.content;
+          if (content && typeof content === 'string' && content.trim().length > 0) {
+            return content.trim();
+          }
         }
-
-        const data = await response.json();
-        const content = data?.choices?.[0]?.message?.content;
-        if (content && typeof content === 'string' && content.trim().length > 0) {
-          return content.trim();
-        }
-      } catch (err: any) {
-        lastError = err?.message || 'Network error';
-      }
+      } catch {}
     }
   }
 
-  return `🔥 SENSEI COACH AI (Offline Mode):
+  return `🔥 SENSEI COACH AI:
 Welcome ${userContext.name || 'Athlete'}! Focus on progressive overload, clean form, and 2g protein per kg. Push hard today! 💪`;
 }

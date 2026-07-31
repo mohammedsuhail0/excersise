@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/api/coach",
+      "destination": "/api/coach.ts"
+    },
+    {
       "source": "/api/groq/(.*)",
       "destination": "https://api.groq.com/$1"
     },
