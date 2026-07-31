@@ -1,5 +1,5 @@
 import React from 'react';
-import { Flame, Sun, Moon, Image, Settings, Footprints } from 'lucide-react';
+import { Flame, Sun, Moon, Image, Settings, Footprints, User } from 'lucide-react';
 import { UserProfile } from '../types';
 
 interface GamificationHeaderProps {
@@ -10,24 +10,30 @@ interface GamificationHeaderProps {
   onCycleBackground: () => void;
   onOpenSettings: () => void;
   onOpenStepCounter?: () => void;
+  onOpenAccountProfile?: () => void;
 }
 
 export const GamificationHeader: React.FC<GamificationHeaderProps> = ({
   user,
-  currentSteps = 6420,
+  currentSteps = 0,
   themeMode,
   onToggleTheme,
   onCycleBackground,
   onOpenSettings,
   onOpenStepCounter,
+  onOpenAccountProfile,
 }) => {
   return (
     <div className="w-full flex items-center justify-between gap-1 select-none animate-fade-up">
-      {/* LEFT: AVATAR + LEVEL & XP BAR */}
-      <div className="flex items-center space-x-2 shrink-0">
+      {/* LEFT: AVATAR + LEVEL & XP BAR (CLICKABLE PROFILE EDIT) */}
+      <button
+        onClick={onOpenAccountProfile}
+        className="flex items-center space-x-2 shrink-0 group text-left transition-all active:scale-95"
+        title="Open Profile Settings"
+      >
         <div className="relative">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center text-white font-extrabold text-[13px] shadow-md border border-white/20">
-            {user.name.charAt(0)}
+          <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center text-white font-extrabold text-[13px] shadow-md border border-white/20 group-hover:border-orange-400">
+            {user.name.charAt(0).toUpperCase()}
           </div>
           <span className="absolute -bottom-0.5 -right-0.5 text-[8px] font-extrabold bg-black/90 text-orange-400 px-1 rounded-full border border-orange-500/40">
             Lvl {user.level}
@@ -35,7 +41,9 @@ export const GamificationHeader: React.FC<GamificationHeaderProps> = ({
         </div>
 
         <div className="flex flex-col justify-center">
-          <span className="text-[11px] font-extrabold leading-none text-white tracking-tight">{user.name}</span>
+          <span className="text-[11px] font-extrabold leading-none text-white tracking-tight group-hover:text-orange-400">
+            {user.name}
+          </span>
           <div className="w-16 h-1.5 bg-white/10 rounded-full mt-1 overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-orange-500 to-amber-500 transition-all duration-300"
@@ -43,7 +51,7 @@ export const GamificationHeader: React.FC<GamificationHeaderProps> = ({
             />
           </div>
         </div>
-      </div>
+      </button>
 
       {/* RIGHT: CLEAN COMPACT INLINE BADGES (STREAK, COMPACT STEPS, THEME, BG, SETTINGS) */}
       <div className="flex items-center space-x-1 overflow-x-auto no-scrollbar">

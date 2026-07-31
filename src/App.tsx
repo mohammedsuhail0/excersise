@@ -9,10 +9,13 @@ import { MacroCalculatorModal } from './components/MacroCalculatorModal';
 import { FeatureSettingsModal } from './components/FeatureSettingsModal';
 import { StepCounterModal } from './components/StepCounterModal';
 import { AICalisthenicsCoachModal } from './components/AICalisthenicsCoachModal';
+import { LandingPage } from './components/LandingPage';
+import { AuthModal } from './components/AuthModal';
+import { AccountProfileModal } from './components/AccountProfileModal';
 
 import { UserProfile, FeatureConfig, SetLog, CalisthenicsExercise, EquipmentMode, WorkoutRoutine } from './types';
 import { TARGET_MUSCLE_GROUPS } from './data/calisthenicsTree';
-import { Home, Dumbbell, Music, Utensils, Trophy, CheckCircle } from 'lucide-react';
+import { Home, Dumbbell, Music, Utensils, Trophy, CheckCircle, Sparkles } from 'lucide-react';
 import { soundEngine } from './services/soundEngine';
 import {
   isSupabaseConfigured,
@@ -20,6 +23,7 @@ import {
   syncCompletedLevelToSupabase,
   logWorkoutToSupabase,
   syncStepsToSupabase,
+  supabase,
 } from './services/supabaseClient';
 
 const BACKGROUND_OPTIONS = {
@@ -55,30 +59,33 @@ const BACKGROUND_OPTIONS = {
 };
 
 export function App() {
+  // CLEAN INITIAL USER STATE (ZERO DUMMY NUMBERS FOR PRODUCTION)
   const [user, setUser] = useState<UserProfile>(() => {
     const saved = localStorage.getItem('aurafit_user');
     if (saved) {
       try { return JSON.parse(saved); } catch (e) {}
     }
     return {
-      name: 'Goku',
-      heightCm: 180,
-      weightKg: 78,
+      name: 'Athlete',
+      heightCm: 175,
+      weightKg: 70,
       targetPhysique: 'Anime Aesthetic',
-      level: 5,
-      xp: 320,
-      maxXp: 500,
-      streakDays: 12,
-      streakShields: 2,
+      level: 1,
+      xp: 0,
+      maxXp: 200,
+      streakDays: 0,
+      streakShields: 0,
     };
   });
 
   const [equipmentMode, setEquipmentMode] = useState<EquipmentMode>('Home');
-  const [activeTab, setActiveTab] = useState<'vibe' | 'workout' | 'music' | 'macro'>('vibe');
+  const [activeTab, setActiveTab] = useState<'landing' | 'vibe' | 'workout' | 'music' | 'macro'>('landing');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isStepCounterOpen, setIsStepCounterOpen] = useState(false);
   const [isMacroCalculatorOpen, setIsMacroCalculatorOpen] = useState(false);
   const [isAICoachOpen, setIsAICoachOpen] = useState(false);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [isAccountProfileOpen, setIsAccountProfileOpen] = useState(false);
   const [selectedFormGuideExercise, setSelectedFormGuideExercise] = useState<CalisthenicsExercise | null>(null);
   const [themeMode, setThemeMode] = useState<'dark' | 'light'>('dark');
   const [bgIndex, setBgIndex] = useState(0);
@@ -90,10 +97,10 @@ export function App() {
     xpEarned: 150,
   });
 
-  // Pedometer Step Tracker State
+  // CLEAN INITIAL PEDOMETER STEPS STATE
   const [currentSteps, setCurrentSteps] = useState<number>(() => {
     const saved = localStorage.getItem('aurafit_daily_steps');
-    return saved ? parseInt(saved, 10) || 6420 : 6420;
+    return saved ? parseInt(saved, 10) || 0 : 0;
   });
   const stepGoal = 10000;
 
@@ -125,6 +132,18 @@ export function App() {
     macroTracker: true,
     gamification: true,
   });
+
+  // Check Supabase Auth Session on Load
+  useEffect(() => {
+    if (isSupabaseConfigured && supabase) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user) {
+          const metaName = session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Athlete';
+          setUser((prev) => ({ ...prev, name: metaName }));
+        }
+      });
+    }
+  }, []);
 
   // Persist State Locally & Sync with Supabase
   useEffect(() => {
@@ -256,6 +275,33 @@ export function App() {
     setActiveTab('vibe');
   };
 
+  const handleAuthSuccess = (userData: { name: string; email: string; isGuest?: boolean }) => {
+    setUser((prev) => ({
+      ...prev,
+      name: userData.name,
+    }));
+    setActiveTab('vibe');
+  };
+
+  const handleSignOut = () => {
+    if (isSupabaseConfigured && supabase) {
+      supabase.auth.signOut();
+    }
+    setUser({
+      name: 'Athlete',
+      heightCm: 175,
+      weightKg: 70,
+      targetPhysique: 'Anime Aesthetic',
+      level: 1,
+      xp: 0,
+      maxXp: 200,
+      streakDays: 0,
+      streakShields: 0,
+    });
+    localStorage.removeItem('aurafit_user');
+    setActiveTab('landing');
+  };
+
   return (
     <div className={`h-screen h-[100dvh] w-full flex justify-center overflow-hidden selection:bg-none ${themeMode === 'light' ? 'light-mode bg-slate-100 text-slate-900' : 'bg-[#07090e] text-white'}`}>
       {/* NATIVE MOBILE CONTAINER LOCKED TO 390px COMPACT WIDTH */}
@@ -277,7 +323,7 @@ export function App() {
         />
 
         {/* TOP HEADER */}
-        {featureConfig.gamification && (
+        {featureConfig.gamification && activeTab !== 'landing' && (
           <div className="relative z-10 shrink-0">
             <GamificationHeader
               user={user}
@@ -287,12 +333,20 @@ export function App() {
               onCycleBackground={handleCycleBackground}
               onOpenSettings={() => setIsSettingsOpen(true)}
               onOpenStepCounter={() => setIsStepCounterOpen(true)}
+              onOpenAccountProfile={() => setIsAccountProfileOpen(true)}
             />
           </div>
         )}
 
         {/* MAIN VIEWPORT CONTENT */}
         <main className="flex-1 flex flex-col justify-between overflow-hidden relative z-10 my-1 min-h-0">
+          {activeTab === 'landing' && (
+            <LandingPage
+              onEnterApp={() => setActiveTab('vibe')}
+              onOpenAuth={() => setIsAuthOpen(true)}
+            />
+          )}
+
           {activeTab === 'vibe' && (
             <TactileVibeSelector
               user={user}
@@ -325,7 +379,20 @@ export function App() {
 
         {/* LIQUID GLASS BOTTOM NAVIGATION DOCK (CLEAN LOGO-ONLY ICON BUTTONS) */}
         <nav className="w-full h-[46px] rounded-full liquid-glass flex items-center justify-around px-3 relative z-50 shrink-0 mt-1">
-          {/* HOME LOGO ICON */}
+          {/* LANDING / HERO TAB */}
+          <button
+            onClick={() => setActiveTab('landing')}
+            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+              activeTab === 'landing'
+                ? 'bg-orange-500/20 text-orange-500 border border-orange-500/40 shadow-lg scale-110'
+                : themeMode === 'light' ? 'text-slate-600 hover:text-slate-900' : 'text-white/60 hover:text-white'
+            }`}
+            title="Landing Showcase"
+          >
+            <Sparkles className="w-5 h-5" />
+          </button>
+
+          {/* HOME DASHBOARD LOGO ICON */}
           <button
             onClick={() => setActiveTab('vibe')}
             className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
@@ -333,7 +400,7 @@ export function App() {
                 ? 'bg-orange-500/20 text-orange-500 border border-orange-500/40 shadow-lg scale-110'
                 : themeMode === 'light' ? 'text-slate-600 hover:text-slate-900' : 'text-white/60 hover:text-white'
             }`}
-            title="Home"
+            title="Dashboard"
           >
             <Home className="w-5 h-5" />
           </button>
@@ -381,6 +448,22 @@ export function App() {
             </button>
           )}
         </nav>
+
+        {/* AUTHENTICATION SIGN IN / SIGN UP MODAL */}
+        <AuthModal
+          isOpen={isAuthOpen}
+          onClose={() => setIsAuthOpen(false)}
+          onAuthSuccess={handleAuthSuccess}
+        />
+
+        {/* ACCOUNT PROFILE MODAL */}
+        <AccountProfileModal
+          isOpen={isAccountProfileOpen}
+          onClose={() => setIsAccountProfileOpen(false)}
+          user={user}
+          onUpdateProfile={(updated) => setUser((prev) => ({ ...prev, ...updated }))}
+          onSignOut={handleSignOut}
+        />
 
         {/* MACRO & CALORIE CALCULATOR MODAL */}
         <MacroCalculatorModal
