@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Footprints, Flame, MapPin, Clock, Award, X, Plus, Play, Pause, RotateCcw, Smartphone } from 'lucide-react';
+import { Footprints, Flame, MapPin, Clock, Award, X, Plus, Play, Pause, RotateCcw, Smartphone, Activity } from 'lucide-react';
 import { soundEngine } from '../services/soundEngine';
 
 interface StepCounterModalProps {
@@ -18,7 +18,11 @@ export const StepCounterModal: React.FC<StepCounterModalProps> = ({
   onUpdateSteps,
 }) => {
   const [isLiveTracking, setIsLiveTracking] = useState(false);
+  
+  // Cadence & Rhythmic Step Filter State Refs
   const lastStepTimeRef = useRef<number>(0);
+  const consecutiveRhythmicStepsRef = useRef<number>(0);
+  const lastAccelMagnitudeRef = useRef<number>(9.8);
 
   // Calculate stats based on steps
   const distanceKm = (currentSteps * 0.00075).toFixed(2); // Avg step ~ 0.75m
@@ -26,7 +30,7 @@ export const StepCounterModal: React.FC<StepCounterModalProps> = ({
   const activeMins = Math.round(currentSteps / 100); // Avg ~ 100 steps/min
   const progressPercent = Math.min(100, Math.round((currentSteps / stepGoal) * 100));
 
-  // 100% REAL HARDWARE PHONE MOTION PEDOMETER (ZERO TIMER SIMULATION)
+  // SMART RHYTHMIC CADENCE PEDOMETER FILTER (REJECTS RANDOM PHONE SHAKES)
   useEffect(() => {
     const handleDeviceMotion = (event: DeviceMotionEvent) => {
       if (!isLiveTracking) return;
@@ -34,20 +38,42 @@ export const StepCounterModal: React.FC<StepCounterModalProps> = ({
       const acc = event.acceleration || event.accelerationIncludingGravity;
       if (!acc || acc.x === null || acc.y === null || acc.z === null) return;
 
-      // Calculate acceleration magnitude
+      // 1. Calculate magnitude of acceleration
       const mag = Math.sqrt(acc.x * acc.x + acc.y * acc.y + acc.z * acc.z);
       const now = Date.now();
+      const timeDelta = now - lastStepTimeRef.current;
 
-      // Human walking stride threshold ~ 13.0 m/s² with 350ms stride interval debounce
-      if (mag > 13.0 && now - lastStepTimeRef.current > 350) {
-        lastStepTimeRef.current = now;
-        onUpdateSteps((prevSteps) => prevSteps + 1);
+      // 2. Low-Pass Filter: Calculate peak acceleration change delta
+      const magDelta = Math.abs(mag - lastAccelMagnitudeRef.current);
+      lastAccelMagnitudeRef.current = mag;
+
+      // 3. Human Walking Stride Cadence Rules:
+      // - Walking step impact threshold: mag > 11.5 m/s² and delta > 2.8 m/s²
+      // - Human walking stride pace is between 380ms (fast sprint) and 850ms (slow walk) per step.
+      // - Random rapid hand shakes are < 350ms -> REJECTED!
+      if (mag > 11.5 && magDelta > 2.8) {
+        if (timeDelta >= 380 && timeDelta <= 850) {
+          // Rhythmic stride confirmed!
+          consecutiveRhythmicStepsRef.current += 1;
+          lastStepTimeRef.current = now;
+
+          // Require at least 2 consecutive rhythmic strides before counting to eliminate single accidental jerks
+          if (consecutiveRhythmicStepsRef.current >= 2) {
+            onUpdateSteps((prev) => prev + 1);
+          }
+        } else if (timeDelta > 850) {
+          // Reset cadence lock if pause between steps is too long
+          consecutiveRhythmicStepsRef.current = 1;
+          lastStepTimeRef.current = now;
+        } else {
+          // Time delta < 380ms: Rapid random shaking detected -> REJECT SHAKE!
+          consecutiveRhythmicStepsRef.current = 0;
+        }
       }
     };
 
     if (isLiveTracking) {
       if (typeof window !== 'undefined' && 'DeviceMotionEvent' in window) {
-        // iOS 13+ motion permission handling
         if (typeof (DeviceMotionEvent as any).requestPermission === 'function') {
           (DeviceMotionEvent as any).requestPermission()
             .then((permissionState: string) => {
@@ -94,7 +120,7 @@ export const StepCounterModal: React.FC<StepCounterModalProps> = ({
             <div>
               <h2 className="text-[16px] font-extrabold leading-tight">Pedometer Step Counter</h2>
               <p className="text-[10px] text-orange-400 font-semibold flex items-center gap-1">
-                <Smartphone className="w-3 h-3" /> Real Hardware Motion Pedometer
+                <Activity className="w-3 h-3 text-orange-400" /> Smart Walking Cadence Filter Active
               </p>
             </div>
           </div>
