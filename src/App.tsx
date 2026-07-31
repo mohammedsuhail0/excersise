@@ -16,7 +16,7 @@ import { StreakModal } from './components/StreakModal';
 
 import { UserProfile, FeatureConfig, SetLog, CalisthenicsExercise, EquipmentMode, WorkoutRoutine } from './types';
 import { TARGET_MUSCLE_GROUPS } from './data/calisthenicsTree';
-import { Home, Dumbbell, Music, Utensils, Trophy, CheckCircle, Sparkles } from 'lucide-react';
+import { Home, Dumbbell, Music, Utensils, Trophy, CheckCircle } from 'lucide-react';
 import { soundEngine } from './services/soundEngine';
 import {
   isSupabaseConfigured,
@@ -60,7 +60,13 @@ const BACKGROUND_OPTIONS = {
 };
 
 export function App() {
-  // CLEAN INITIAL USER STATE (ZERO DUMMY NUMBERS FOR PRODUCTION)
+  // LANDING PAGE GATEWAY STATE
+  const [isLandingMode, setIsLandingMode] = useState<boolean>(() => {
+    const savedUser = localStorage.getItem('aurafit_user');
+    return !savedUser; // Show Landing Page by default if user is not logged in!
+  });
+
+  // CLEAN INITIAL USER STATE
   const [user, setUser] = useState<UserProfile>(() => {
     const saved = localStorage.getItem('aurafit_user');
     if (saved) {
@@ -80,7 +86,7 @@ export function App() {
   });
 
   const [equipmentMode, setEquipmentMode] = useState<EquipmentMode>('Home');
-  const [activeTab, setActiveTab] = useState<'landing' | 'vibe' | 'workout' | 'music' | 'macro'>('landing');
+  const [activeTab, setActiveTab] = useState<'vibe' | 'workout' | 'music' | 'macro'>('vibe');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isStepCounterOpen, setIsStepCounterOpen] = useState(false);
   const [isMacroCalculatorOpen, setIsMacroCalculatorOpen] = useState(false);
@@ -142,6 +148,7 @@ export function App() {
         if (session?.user) {
           const metaName = session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Athlete';
           setUser((prev) => ({ ...prev, name: metaName }));
+          setIsLandingMode(false); // Logged in -> Go directly into app!
         }
       });
     }
@@ -282,6 +289,7 @@ export function App() {
       ...prev,
       name: userData.name,
     }));
+    setIsLandingMode(false); // Enter App Dashboard!
     setActiveTab('vibe');
   };
 
@@ -301,7 +309,7 @@ export function App() {
       streakShields: 0,
     });
     localStorage.removeItem('aurafit_user');
-    setActiveTab('landing');
+    setIsLandingMode(true); // Return to Landing Page Gateway!
   };
 
   return (
@@ -324,8 +332,8 @@ export function App() {
           }`}
         />
 
-        {/* TOP HEADER */}
-        {featureConfig.gamification && activeTab !== 'landing' && (
+        {/* TOP HEADER (ONLY VISIBLE INSIDE APP DASHBOARD) */}
+        {!isLandingMode && featureConfig.gamification && (
           <div className="relative z-10 shrink-0">
             <GamificationHeader
               user={user}
@@ -343,114 +351,110 @@ export function App() {
 
         {/* MAIN VIEWPORT CONTENT */}
         <main className="flex-1 flex flex-col justify-between overflow-hidden relative z-10 my-1 min-h-0">
-          {activeTab === 'landing' && (
+          {isLandingMode ? (
+            /* FULL-SCREEN LANDING PAGE GATEWAY */
             <LandingPage
-              onEnterApp={() => setActiveTab('vibe')}
+              onEnterApp={() => {
+                setIsLandingMode(false);
+                setActiveTab('vibe');
+              }}
               onOpenAuth={() => setIsAuthOpen(true)}
             />
-          )}
+          ) : (
+            /* APP DASHBOARD VIEWS */
+            <>
+              {activeTab === 'vibe' && (
+                <TactileVibeSelector
+                  user={user}
+                  equipmentMode={equipmentMode}
+                  completedLevels={completedLevels}
+                  onToggleEquipment={() => setEquipmentMode((prev) => (prev === 'Home' ? 'Gym' : 'Home'))}
+                  onStartWorkout={handleStartPhaseWorkout}
+                  onOpenAICoach={() => setIsAICoachOpen(true)}
+                />
+              )}
 
-          {activeTab === 'vibe' && (
-            <TactileVibeSelector
-              user={user}
-              equipmentMode={equipmentMode}
-              completedLevels={completedLevels}
-              onToggleEquipment={() => setEquipmentMode((prev) => (prev === 'Home' ? 'Gym' : 'Home'))}
-              onStartWorkout={handleStartPhaseWorkout}
-              onOpenAICoach={() => setIsAICoachOpen(true)}
-            />
-          )}
+              {activeTab === 'workout' && (
+                <ActiveWorkoutMode
+                  routine={activePhaseRoutine}
+                  onLogSet={handleLogSet}
+                  onFinishWorkout={handleFinishWorkout}
+                  onBackToSkills={() => setActiveTab('vibe')}
+                  onOpenFormGuide={(exercise) => setSelectedFormGuideExercise(exercise)}
+                />
+              )}
 
-          {activeTab === 'workout' && (
-            <ActiveWorkoutMode
-              routine={activePhaseRoutine}
-              onLogSet={handleLogSet}
-              onFinishWorkout={handleFinishWorkout}
-              onBackToSkills={() => setActiveTab('vibe')}
-              onOpenFormGuide={(exercise) => setSelectedFormGuideExercise(exercise)}
-            />
-          )}
+              {activeTab === 'music' && featureConfig.musicDeck && (
+                <SpotifyAudioWidget />
+              )}
 
-          {activeTab === 'music' && featureConfig.musicDeck && (
-            <SpotifyAudioWidget />
-          )}
-
-          {activeTab === 'macro' && featureConfig.macroTracker && (
-            <MacroScannerModal />
+              {activeTab === 'macro' && featureConfig.macroTracker && (
+                <MacroScannerModal />
+              )}
+            </>
           )}
         </main>
 
-        {/* LIQUID GLASS BOTTOM NAVIGATION DOCK (CLEAN LOGO-ONLY ICON BUTTONS) */}
-        <nav className="w-full h-[46px] rounded-full liquid-glass flex items-center justify-around px-3 relative z-50 shrink-0 mt-1">
-          {/* LANDING / HERO TAB */}
-          <button
-            onClick={() => setActiveTab('landing')}
-            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-              activeTab === 'landing'
-                ? 'bg-orange-500/20 text-orange-500 border border-orange-500/40 shadow-lg scale-110'
-                : themeMode === 'light' ? 'text-slate-600 hover:text-slate-900' : 'text-white/60 hover:text-white'
-            }`}
-            title="Landing Showcase"
-          >
-            <Sparkles className="w-5 h-5" />
-          </button>
-
-          {/* HOME DASHBOARD LOGO ICON */}
-          <button
-            onClick={() => setActiveTab('vibe')}
-            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-              activeTab === 'vibe'
-                ? 'bg-orange-500/20 text-orange-500 border border-orange-500/40 shadow-lg scale-110'
-                : themeMode === 'light' ? 'text-slate-600 hover:text-slate-900' : 'text-white/60 hover:text-white'
-            }`}
-            title="Dashboard"
-          >
-            <Home className="w-5 h-5" />
-          </button>
-
-          {/* WORKOUT LOGO ICON */}
-          <button
-            onClick={() => setActiveTab('workout')}
-            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-              activeTab === 'workout'
-                ? 'bg-orange-500/20 text-orange-500 border border-orange-500/40 shadow-lg scale-110'
-                : themeMode === 'light' ? 'text-slate-600 hover:text-slate-900' : 'text-white/60 hover:text-white'
-            }`}
-            title="Workout"
-          >
-            <Dumbbell className="w-5 h-5" />
-          </button>
-
-          {/* AUDIO LOGO ICON */}
-          {featureConfig.musicDeck && (
+        {/* LIQUID GLASS BOTTOM NAVIGATION DOCK (ONLY VISIBLE INSIDE APP DASHBOARD) */}
+        {!isLandingMode && (
+          <nav className="w-full h-[46px] rounded-full liquid-glass flex items-center justify-around px-3 relative z-50 shrink-0 mt-1">
+            {/* HOME DASHBOARD LOGO ICON */}
             <button
-              onClick={() => setActiveTab('music')}
+              onClick={() => setActiveTab('vibe')}
               className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-                activeTab === 'music'
+                activeTab === 'vibe'
                   ? 'bg-orange-500/20 text-orange-500 border border-orange-500/40 shadow-lg scale-110'
                   : themeMode === 'light' ? 'text-slate-600 hover:text-slate-900' : 'text-white/60 hover:text-white'
               }`}
-              title="Audio"
+              title="Dashboard"
             >
-              <Music className="w-5 h-5" />
+              <Home className="w-5 h-5" />
             </button>
-          )}
 
-          {/* MACROS LOGO ICON */}
-          {featureConfig.macroTracker && (
+            {/* WORKOUT LOGO ICON */}
             <button
-              onClick={() => setIsMacroCalculatorOpen(true)}
+              onClick={() => setActiveTab('workout')}
               className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-                activeTab === 'macro'
+                activeTab === 'workout'
                   ? 'bg-orange-500/20 text-orange-500 border border-orange-500/40 shadow-lg scale-110'
                   : themeMode === 'light' ? 'text-slate-600 hover:text-slate-900' : 'text-white/60 hover:text-white'
               }`}
-              title="Macros"
+              title="Workout"
             >
-              <Utensils className="w-5 h-5" />
+              <Dumbbell className="w-5 h-5" />
             </button>
-          )}
-        </nav>
+
+            {/* AUDIO LOGO ICON */}
+            {featureConfig.musicDeck && (
+              <button
+                onClick={() => setActiveTab('music')}
+                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                  activeTab === 'music'
+                    ? 'bg-orange-500/20 text-orange-500 border border-orange-500/40 shadow-lg scale-110'
+                    : themeMode === 'light' ? 'text-slate-600 hover:text-slate-900' : 'text-white/60 hover:text-white'
+                }`}
+                title="Audio"
+              >
+                <Music className="w-5 h-5" />
+              </button>
+            )}
+
+            {/* MACROS LOGO ICON */}
+            {featureConfig.macroTracker && (
+              <button
+                onClick={() => setIsMacroCalculatorOpen(true)}
+                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                  activeTab === 'macro'
+                    ? 'bg-orange-500/20 text-orange-500 border border-orange-500/40 shadow-lg scale-110'
+                    : themeMode === 'light' ? 'text-slate-600 hover:text-slate-900' : 'text-white/60 hover:text-white'
+                }`}
+                title="Macros"
+              >
+                <Utensils className="w-5 h-5" />
+              </button>
+            )}
+          </nav>
+        )}
 
         {/* AUTHENTICATION SIGN IN / SIGN UP MODAL */}
         <AuthModal
