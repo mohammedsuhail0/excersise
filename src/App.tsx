@@ -323,61 +323,61 @@ export function App() {
           )}
         </main>
 
-        {/* LIQUID GLASS BOTTOM NAVIGATION DOCK */}
-        <nav className="w-full h-[44px] rounded-full liquid-glass flex items-center justify-around px-2 relative z-50 shrink-0 mt-1">
-          {/* HOME TAB */}
+        {/* LIQUID GLASS BOTTOM NAVIGATION DOCK (CLEAN LOGO-ONLY ICON BUTTONS) */}
+        <nav className="w-full h-[46px] rounded-full liquid-glass flex items-center justify-around px-3 relative z-50 shrink-0 mt-1">
+          {/* HOME LOGO ICON */}
           <button
             onClick={() => setActiveTab('vibe')}
-            className={`flex flex-col items-center justify-center px-3 py-0.5 rounded-full transition-all ${
+            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
               activeTab === 'vibe'
-                ? 'text-orange-500 font-bold scale-105'
+                ? 'bg-orange-500/20 text-orange-500 border border-orange-500/40 shadow-lg scale-110'
                 : themeMode === 'light' ? 'text-slate-600 hover:text-slate-900' : 'text-white/60 hover:text-white'
             }`}
+            title="Home"
           >
-            <Home className="w-4 h-4 mb-0.5" />
-            <span className="text-[9px] tracking-tight">Home</span>
+            <Home className="w-5 h-5" />
           </button>
 
-          {/* WORKOUT TAB */}
+          {/* WORKOUT LOGO ICON */}
           <button
             onClick={() => setActiveTab('workout')}
-            className={`flex flex-col items-center justify-center px-3 py-0.5 rounded-full transition-all ${
+            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
               activeTab === 'workout'
-                ? 'text-orange-500 font-bold scale-105'
+                ? 'bg-orange-500/20 text-orange-500 border border-orange-500/40 shadow-lg scale-110'
                 : themeMode === 'light' ? 'text-slate-600 hover:text-slate-900' : 'text-white/60 hover:text-white'
             }`}
+            title="Workout"
           >
-            <Dumbbell className="w-4 h-4 mb-0.5" />
-            <span className="text-[9px] tracking-tight">Workout</span>
+            <Dumbbell className="w-5 h-5" />
           </button>
 
-          {/* AUDIO TAB */}
+          {/* AUDIO LOGO ICON */}
           {featureConfig.musicDeck && (
             <button
               onClick={() => setActiveTab('music')}
-              className={`flex flex-col items-center justify-center px-3 py-0.5 rounded-full transition-all ${
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
                 activeTab === 'music'
-                  ? 'text-orange-500 font-bold scale-105'
+                  ? 'bg-orange-500/20 text-orange-500 border border-orange-500/40 shadow-lg scale-110'
                   : themeMode === 'light' ? 'text-slate-600 hover:text-slate-900' : 'text-white/60 hover:text-white'
               }`}
+              title="Audio"
             >
-              <Music className="w-4 h-4 mb-0.5" />
-              <span className="text-[9px] tracking-tight">Audio</span>
+              <Music className="w-5 h-5" />
             </button>
           )}
 
-          {/* MACROS TAB */}
+          {/* MACROS LOGO ICON */}
           {featureConfig.macroTracker && (
             <button
               onClick={() => setIsMacroCalculatorOpen(true)}
-              className={`flex flex-col items-center justify-center px-3 py-0.5 rounded-full transition-all ${
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
                 activeTab === 'macro'
-                  ? 'text-orange-500 font-bold scale-105'
+                  ? 'bg-orange-500/20 text-orange-500 border border-orange-500/40 shadow-lg scale-110'
                   : themeMode === 'light' ? 'text-slate-600 hover:text-slate-900' : 'text-white/60 hover:text-white'
               }`}
+              title="Macros"
             >
-              <Utensils className="w-4 h-4 mb-0.5" />
-              <span className="text-[9px] tracking-tight">Macros</span>
+              <Utensils className="w-5 h-5" />
             </button>
           )}
         </nav>
