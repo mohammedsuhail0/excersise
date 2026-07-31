@@ -81,7 +81,7 @@ Structure into 4 meals (Breakfast, Lunch, Pre-Workout Snack, Dinner). Keep it hi
       soundEngine.playSetCompleteChime();
       setAiMealPlan(planText);
     } catch (e) {
-      console.error('Failed to generate AI meal plan:', e);
+      console.error('Failed to generate meal plan:', e);
     } finally {
       setIsGeneratingPlan(false);
     }
@@ -102,7 +102,7 @@ Structure into 4 meals (Breakfast, Lunch, Pre-Workout Snack, Dinner). Keep it hi
                 <h2 className="text-[15px] font-extrabold leading-tight">Macro & TDEE Calculator</h2>
                 <Sparkles className="w-3.5 h-3.5 text-amber-400" />
               </div>
-              <p className="text-[9.5px] text-amber-400 font-semibold">Greek God Bio-Nutrition Engine</p>
+              <p className="text-[9.5px] text-amber-400 font-semibold">Precision Bio-Nutrition Engine</p>
             </div>
           </div>
 
@@ -255,7 +255,7 @@ Structure into 4 meals (Breakfast, Lunch, Pre-Workout Snack, Dinner). Keep it hi
             </div>
           </div>
 
-          {/* AI MEAL PLAN GENERATOR BUTTON */}
+          {/* PERSONALIZED MEAL PLAN GENERATOR BUTTON */}
           <button
             onClick={handleGenerateAIMealPlan}
             disabled={isGeneratingPlan}
@@ -264,23 +264,23 @@ Structure into 4 meals (Breakfast, Lunch, Pre-Workout Snack, Dinner). Keep it hi
             {isGeneratingPlan ? (
               <>
                 <RefreshCw className="w-4 h-4 animate-spin text-white" />
-                <span>Generating NVIDIA AI Meal Plan...</span>
+                <span>Crafting Your Custom Meal Plan...</span>
               </>
             ) : (
               <>
                 <Utensils className="w-4 h-4 text-white" />
-                <span>Generate 1-Day AI Meal Plan</span>
+                <span>Generate Personal Bio-Meal Plan</span>
                 <Sparkles className="w-3.5 h-3.5 text-amber-200" />
               </>
             )}
           </button>
 
-          {/* AI GENERATED MEAL PLAN DISPLAY */}
+          {/* GENERATED MEAL PLAN DISPLAY */}
           {aiMealPlan && (
             <div className="liquid-glass p-3.5 rounded-2xl border border-amber-500/40 space-y-2 animate-fade-up">
               <div className="flex items-center space-x-2 text-amber-400">
                 <CheckCircle2 className="w-4 h-4" />
-                <span className="text-[11px] font-extrabold">Your Custom NVIDIA AI Meal Plan</span>
+                <span className="text-[11px] font-extrabold">Your Personalized Bio-Nutrition Plan</span>
               </div>
               <p className="text-[11.5px] leading-relaxed text-white/90 whitespace-pre-line font-medium bg-black/40 p-3 rounded-xl border border-white/10">
                 {aiMealPlan}
