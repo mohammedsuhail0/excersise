@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Music, Play, Pause, SkipForward, Disc, Zap, Flame, Radio, Volume2, Sparkles, LogIn, CheckCircle2, User, RefreshCw } from 'lucide-react';
+import { Music, Play, Pause, SkipForward, Disc, Zap, Flame, Radio, Volume2, Sparkles, LogIn, CheckCircle2, User, HeartHandshake, Smile } from 'lucide-react';
 import { soundEngine } from '../services/soundEngine';
 
 interface PlaylistOption {
   id: string;
   name: string;
+  category: 'energy' | 'relax';
   genre: string;
   artist: string;
   bpm: string;
@@ -18,53 +19,69 @@ const DEFAULT_SPOTIFY_CLIENT_ID = '6abb2966d85641b2bf05478031676c46';
 const CURATED_PLAYLISTS: PlaylistOption[] = [
   {
     id: 'phonk-01',
-    name: 'DRIFT PHONK PR',
-    genre: 'phonk',
-    artist: 'Kordhell, CORPSE, KSLV',
+    name: 'DRIFT PHONK',
+    category: 'energy',
+    genre: 'Phonk',
+    artist: 'Kordhell, KSLV, DVRST',
     bpm: '160 BPM',
     spotifyUri: 'https://open.spotify.com/embed/playlist/37i9dQZF1DWWY64wDtewQt?utm_source=generator&theme=0',
     coverImage: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=400&q=80',
     accentColor: 'from-orange-500 to-amber-500',
   },
   {
+    id: 'beastmode-01',
+    name: 'BEAST MODE GYM',
+    category: 'energy',
+    genre: 'Workout Hype',
+    artist: 'Travis Scott, Drake, Eminem',
+    bpm: '140 BPM',
+    spotifyUri: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX35oM5SpBvwu?utm_source=generator&theme=0',
+    coverImage: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=400&q=80',
+    accentColor: 'from-amber-500 to-red-500',
+  },
+  {
     id: 'hardstyle-01',
-    name: 'HARDSTYLE BASS',
-    genre: 'hardstyle',
-    artist: 'Tevez, Sub Zero Project, Headhunterz',
+    name: 'HARDSTYLE WORKOUT',
+    category: 'energy',
+    genre: 'Hardstyle',
+    artist: 'Sub Zero Project, Tevez, Headhunterz',
     bpm: '150 BPM',
     spotifyUri: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX0pH238juFUe?utm_source=generator&theme=0',
     coverImage: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=400&q=80',
     accentColor: 'from-red-500 to-orange-500',
   },
   {
-    id: 'synthwave-01',
-    name: 'CYBER SYNTHWAVE',
-    genre: 'synthwave',
-    artist: 'Carpenter Brut, Kavinsky, Synthwave',
-    bpm: '125 BPM',
-    spotifyUri: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXdLEN7aqioXM?utm_source=generator&theme=0',
-    coverImage: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=400&q=80',
-    accentColor: 'from-purple-500 to-pink-500',
-  },
-  {
-    id: 'metal-01',
-    name: 'PRIMAL GYM RAGE',
-    genre: 'metal',
-    artist: 'Mick Gordon, Slipknot, Doom OST',
-    bpm: '175 BPM',
+    id: 'rock-01',
+    name: 'ROCK HARD DRIVE',
+    category: 'energy',
+    genre: 'Heavy Metal & Rock',
+    artist: 'Doom OST, Slipknot, Rammstein',
+    bpm: '170 BPM',
     spotifyUri: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXe632dDejWuD?utm_source=generator&theme=0',
     coverImage: 'https://images.unsplash.com/photo-1511735111819-9a3f7709049c?auto=format&fit=crop&w=400&q=80',
     accentColor: 'from-amber-600 to-red-600',
   },
   {
     id: 'lofi-01',
-    name: 'ZEN RECOVERY LOFI',
-    genre: 'lofi',
-    artist: 'ChilledCow, Lofi Girl, Zen',
+    name: 'LOFI CHILL BEATS',
+    category: 'relax',
+    genre: 'Lofi & Ambient',
+    artist: 'Lofi Girl, Chillhop Music',
     bpm: '85 BPM',
     spotifyUri: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX8Ueb2CM3R1r?utm_source=generator&theme=0',
     coverImage: 'https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=400&q=80',
     accentColor: 'from-emerald-500 to-teal-500',
+  },
+  {
+    id: 'piano-01',
+    name: 'PEACEFUL PIANO ZEN',
+    category: 'relax',
+    genre: 'Deep Relaxation',
+    artist: 'Yiruma, Ludovico Einaudi',
+    bpm: '60 BPM',
+    spotifyUri: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX4sWSpwq3LiO?utm_source=generator&theme=0',
+    coverImage: 'https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?auto=format&fit=crop&w=400&q=80',
+    accentColor: 'from-blue-500 to-cyan-500',
   },
 ];
 
@@ -94,6 +111,7 @@ async function generateCodeChallenge(codeVerifier: string): Promise<string> {
 
 export const SpotifyAudioWidget: React.FC = () => {
   const [selectedPlaylist, setSelectedPlaylist] = useState<PlaylistOption>(CURATED_PLAYLISTS[0]);
+  const [moodFilter, setMoodFilter] = useState<'all' | 'energy' | 'relax'>('all');
   const [activeTab, setActiveTab] = useState<'spotify' | 'synthesizer'>('spotify');
   const [isSynthPlaying, setIsSynthPlaying] = useState<boolean>(false);
 
@@ -157,7 +175,6 @@ export const SpotifyAudioWidget: React.FC = () => {
     })
       .then((res) => {
         if (res.status === 401) {
-          // Token expired or invalid
           setSpotifyToken(null);
           setSpotifyProfile(null);
           localStorage.removeItem('spotify_access_token');
@@ -185,6 +202,7 @@ export const SpotifyAudioWidget: React.FC = () => {
           const formatted: PlaylistOption[] = data.items.map((item: any, idx: number) => ({
             id: `user-pl-${item.id || idx}`,
             name: item.name?.toUpperCase() || 'MY PLAYLIST',
+            category: 'energy',
             genre: 'personal',
             artist: `By ${item.owner?.display_name || 'You'}`,
             bpm: 'PERSONAL',
@@ -310,10 +328,15 @@ export const SpotifyAudioWidget: React.FC = () => {
     }
   };
 
-  const allAvailablePlaylists = [...userPlaylists, ...CURATED_PLAYLISTS];
+  const filteredCurated = CURATED_PLAYLISTS.filter((pl) => {
+    if (moodFilter === 'all') return true;
+    return pl.category === moodFilter;
+  });
+
+  const allAvailablePlaylists = [...userPlaylists, ...filteredCurated];
 
   return (
-    <div className="flex flex-col h-full justify-between select-none animate-fade-up space-y-2.5">
+    <div className="flex flex-col h-full justify-between select-none animate-fade-up space-y-2">
       
       {/* HEADER WITH SPOTIFY CONNECT & CATEGORY TOGGLES */}
       <div className="liquid-glass rounded-[24px] p-3 flex items-center justify-between border border-orange-500/30">
@@ -368,6 +391,51 @@ export const SpotifyAudioWidget: React.FC = () => {
       {activeTab === 'spotify' ? (
         <div className="flex-1 flex flex-col space-y-2 overflow-hidden min-h-0">
           
+          {/* MOOD & ENERGY CATEGORY SELECTOR STRIP */}
+          <div className="flex items-center space-x-1.5 shrink-0 justify-between">
+            <button
+              onClick={() => {
+                soundEngine.playTick();
+                setMoodFilter('all');
+              }}
+              className={`flex-1 py-1 rounded-full text-[9.5px] font-extrabold uppercase transition-all ${
+                moodFilter === 'all'
+                  ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md'
+                  : 'liquid-glass text-white/60 hover:text-white'
+              }`}
+            >
+              🔥 All Vibes ({CURATED_PLAYLISTS.length})
+            </button>
+
+            <button
+              onClick={() => {
+                soundEngine.playTick();
+                setMoodFilter('energy');
+              }}
+              className={`flex-1 py-1 rounded-full text-[9.5px] font-extrabold uppercase transition-all ${
+                moodFilter === 'energy'
+                  ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white shadow-md'
+                  : 'liquid-glass text-white/60 hover:text-white'
+              }`}
+            >
+              ⚡ High Energy (4)
+            </button>
+
+            <button
+              onClick={() => {
+                soundEngine.playTick();
+                setMoodFilter('relax');
+              }}
+              className={`flex-1 py-1 rounded-full text-[9.5px] font-extrabold uppercase transition-all ${
+                moodFilter === 'relax'
+                  ? 'bg-gradient-to-r from-teal-500 to-emerald-500 text-white shadow-md'
+                  : 'liquid-glass text-white/60 hover:text-white'
+              }`}
+            >
+              🧘 Relax & Zen (2)
+            </button>
+          </div>
+
           {/* PLAYLIST SELECTION TOUCH-SWIPEABLE HORIZONTAL STRIP */}
           <div className="flex items-center space-x-2 overflow-x-auto scroll-smooth snap-x snap-mandatory py-1 px-1 shrink-0 touch-pan-x no-scrollbar">
             {allAvailablePlaylists.map((pl) => (
@@ -383,7 +451,11 @@ export const SpotifyAudioWidget: React.FC = () => {
                     : 'liquid-glass text-white/70 border-white/10 hover:border-white/30'
                 }`}
               >
-                <Flame className="w-3 h-3 text-emerald-300 shrink-0" />
+                {pl.category === 'relax' ? (
+                  <Smile className="w-3 h-3 text-cyan-300 shrink-0" />
+                ) : (
+                  <Flame className="w-3 h-3 text-amber-300 shrink-0" />
+                )}
                 <span className="whitespace-nowrap">{pl.name}</span>
               </button>
             ))}
