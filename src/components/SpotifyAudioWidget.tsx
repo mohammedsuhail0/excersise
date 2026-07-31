@@ -205,8 +205,8 @@ export const SpotifyAudioWidget: React.FC = () => {
       {activeTab === 'spotify' ? (
         <div className="flex-1 flex flex-col space-y-2 overflow-hidden min-h-0">
           
-          {/* PLAYLIST SELECTION HORIZONTAL STRIP */}
-          <div className="flex items-center space-x-1.5 overflow-x-auto no-scrollbar py-1 shrink-0">
+          {/* PLAYLIST SELECTION TOUCH-SWIPEABLE HORIZONTAL STRIP */}
+          <div className="flex items-center space-x-2 overflow-x-auto scroll-smooth snap-x snap-mandatory py-1 px-1 shrink-0 touch-pan-x no-scrollbar">
             {SPOTIFY_PLAYLISTS.map((pl) => (
               <button
                 key={pl.id}
@@ -214,14 +214,14 @@ export const SpotifyAudioWidget: React.FC = () => {
                   soundEngine.playTick();
                   setSelectedPlaylist(pl);
                 }}
-                className={`px-3 py-1.5 rounded-2xl text-[10px] font-extrabold shrink-0 flex items-center space-x-1.5 border transition-all ${
+                className={`px-3 py-1.5 rounded-2xl text-[10px] font-extrabold shrink-0 flex items-center space-x-1.5 border snap-start transition-all active:scale-95 ${
                   selectedPlaylist.id === pl.id
                     ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white border-white/40 shadow-lg scale-105'
                     : 'liquid-glass text-white/70 border-white/10 hover:border-white/30'
                 }`}
               >
-                <Flame className="w-3 h-3 text-amber-300" />
-                <span>{pl.name}</span>
+                <Flame className="w-3 h-3 text-amber-300 shrink-0" />
+                <span className="whitespace-nowrap">{pl.name}</span>
               </button>
             ))}
           </div>
