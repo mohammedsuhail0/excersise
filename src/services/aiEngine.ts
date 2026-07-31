@@ -97,27 +97,32 @@ export const ROUTINES_MAP: Record<VibeStage, WorkoutRoutine> = {
 
 export type LLMProvider = 'nvidia' | 'groq' | 'gemini';
 
-// LIVE NVIDIA NIM LLM ENGINE (DEFAULTS TO NVIDIA NIM LLAMA-3.1-70B)
+// ULTRA-FAST & STRICT FITNESS GUARDRAILED LLM ENGINE
 export async function callMultiProviderLLMCoachAPI(
   prompt: string,
   userContext: any,
   provider: LLMProvider = 'nvidia',
   customApiKey?: string
 ): Promise<string> {
-  const systemInstruction = `You are Sensei Goku, an elite Master Calisthenics & Fitness Coach. You speak directly to the athlete:
-- Name: ${userContext.name || 'Goku'}
-- Height: ${userContext.heightCm || 180}cm
-- Weight: ${userContext.weightKg || 78}kg
-- Target Physique: ${userContext.targetPhysique || 'Anime Aesthetic'}
-- Level: ${userContext.level || 5}
+  const lowerPrompt = prompt.toLowerCase();
 
-Answer the user's question with deep biomechanical accuracy, progressive calisthenics leverage cues, and sports nutrition science. Keep your answer under 160 words, concise, formatted with clear bullet points and emojis. Be motivating, direct, and helpful!`;
+  // 1. INSTANT CLIENT-SIDE GUARDRAIL FOR CODING / NON-FITNESS REQUESTS
+  const offTopicKeywords = ['python', 'code', 'javascript', 'html', 'css', 'java', 'programming', 'script', 'function', 'math', 'equation', 'game', 'movie', 'song', 'essay', 'poem'];
+  if (offTopicKeywords.some((word) => lowerPrompt.includes(word))) {
+    return `OSS ${userContext.name || 'Athlete'}! 🥋 As your Calisthenics Coach, I strictly focus on workouts, bodyweight skill progressions, form cues, and sports nutrition. Let us get back to training! 💪`;
+  }
 
-  // 1. NVIDIA NIM API (PRIMARY ENGINE)
+  const systemInstruction = `You are Sensei Goku, a Master Calisthenics Coach. You talk directly to the athlete:
+- Athlete: ${userContext.name || 'Goku'} (${userContext.weightKg || 78}kg, ${userContext.heightCm || 180}cm, ${userContext.targetPhysique || 'Anime Aesthetic'} target).
+
+CRITICAL RULE: You are STRICTLY a Calisthenics, Fitness, & Sports Nutrition Coach. If the user asks about ANYTHING else (coding, Python, math, movies, tech), politely refuse and refocus on workouts.
+Answer fitness questions concisely in under 90 words with bullet points and emojis. Be fast, direct, and motivating!`;
+
+  // 2. ULTRA-FAST NVIDIA NIM INFERENCE (MAX 180 TOKENS FOR SPEED)
   if (provider === 'nvidia') {
     const apiKey = customApiKey || import.meta.env.VITE_NVIDIA_API_KEY || '';
     if (!apiKey) {
-      return `⚠️ NVIDIA API Key missing. Please paste your NVIDIA API Key (nvapi-...) to activate live Llama 3.1 70B AI responses!`;
+      return generateDynamicSmartFallback(prompt, userContext);
     }
 
     const endpointsToTry = [
@@ -128,69 +133,32 @@ Answer the user's question with deep biomechanical accuracy, progressive calisth
     const modelsToTry = [
       'meta/llama-3.1-70b-instruct',
       'nvidia/llama-3.1-nemotron-70b-instruct',
-      'meta/llama3-70b-instruct',
     ];
 
     for (const endpoint of endpointsToTry) {
       for (const model of modelsToTry) {
         try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 3500); // 3.5s speed timeout
+
           const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
               Authorization: `Bearer ${apiKey}`,
               'Content-Type': 'application/json',
             },
+            signal: controller.signal,
             body: JSON.stringify({
               model: model,
               messages: [
                 { role: 'system', content: systemInstruction },
                 { role: 'user', content: prompt },
               ],
-              temperature: 0.7,
-              max_tokens: 350,
+              temperature: 0.5,
+              max_tokens: 180, // Reduced tokens for ultra-fast generation speed
             }),
           });
-
-          if (response.ok) {
-            const data = await response.json();
-            const text = data?.choices?.[0]?.message?.content;
-            if (text) return text.trim();
-          } else {
-            console.warn(`NVIDIA API endpoint ${endpoint} model ${model} failed (${response.status})`);
-          }
-        } catch (e) {
-          console.warn(`NVIDIA API endpoint ${endpoint} error:`, e);
-        }
-      }
-    }
-  }
-
-  // 2. GROQ API FALLBACK
-  if (provider === 'groq') {
-    const apiKey = customApiKey || import.meta.env.VITE_GROQ_API_KEY || '';
-    if (apiKey) {
-      const endpointsToTry = [
-        '/api/groq/openai/v1/chat/completions',
-        'https://api.groq.com/openai/v1/chat/completions',
-      ];
-      for (const endpoint of endpointsToTry) {
-        try {
-          const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${apiKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              model: 'llama-3.3-70b-versatile',
-              messages: [
-                { role: 'system', content: systemInstruction },
-                { role: 'user', content: prompt },
-              ],
-              temperature: 0.7,
-              max_tokens: 350,
-            }),
-          });
+          clearTimeout(timeoutId);
 
           if (response.ok) {
             const data = await response.json();
@@ -198,40 +166,8 @@ Answer the user's question with deep biomechanical accuracy, progressive calisth
             if (text) return text.trim();
           }
         } catch (e) {
-          console.warn('Groq API Error:', e);
+          // Timeout or fetch error -> try next or fallback fast
         }
-      }
-    }
-  }
-
-  // 3. GEMINI 1.5 FLASH API FALLBACK
-  if (provider === 'gemini') {
-    const apiKey = customApiKey || import.meta.env.VITE_GEMINI_API_KEY || '';
-    if (apiKey) {
-      try {
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [
-                {
-                  role: 'user',
-                  parts: [{ text: `${systemInstruction}\n\nUser Question: ${prompt}` }],
-                },
-              ],
-            }),
-          }
-        );
-
-        if (response.ok) {
-          const data = await response.json();
-          const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (text) return text.trim();
-        }
-      } catch (e) {
-        console.warn('Gemini API Error:', e);
       }
     }
   }
@@ -273,5 +209,5 @@ function generateDynamicSmartFallback(prompt: string, userContext: any): string 
 • Hold Tuck Planche for 5 sets of 12s before advancing!`;
   }
 
-  return `💪 Hey ${name}! To progress in calisthenics, focus on progressive leverage (shifting body weight further forward or raising feet), strict 3-0-1 tempo, and full range of motion. Ask me about any specific move or nutrition goal!`;
+  return `💪 OSS ${name}! To progress in calisthenics, focus on progressive leverage (shifting body weight further forward), strict 3-0-1 tempo, and full range of motion. What calisthenics move or nutrition goal are we tackling today?`;
 }
