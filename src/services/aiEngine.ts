@@ -95,17 +95,17 @@ export const ROUTINES_MAP: Record<VibeStage, WorkoutRoutine> = {
   },
 };
 
-export type LLMProvider = 'groq' | 'nvidia' | 'gemini';
+export type LLMProvider = 'nvidia' | 'groq' | 'gemini';
 
-// MULTI-PROVIDER LIVE REAL-TIME LLM ENGINE (GROQ, NVIDIA NIM, GEMINI)
+// LIVE NVIDIA NIM LLM ENGINE (DEFAULTS TO NVIDIA NIM LLAMA-3.1-70B)
 export async function callMultiProviderLLMCoachAPI(
   prompt: string,
   userContext: any,
-  provider: LLMProvider = 'groq',
+  provider: LLMProvider = 'nvidia',
   customApiKey?: string
 ): Promise<string> {
   const systemInstruction = `You are Sensei Goku, an elite Master Calisthenics & Fitness Coach. You speak directly to the athlete:
-- Name: ${userContext.name || 'Athlete'}
+- Name: ${userContext.name || 'Goku'}
 - Height: ${userContext.heightCm || 180}cm
 - Weight: ${userContext.weightKg || 78}kg
 - Target Physique: ${userContext.targetPhysique || 'Anime Aesthetic'}
@@ -113,7 +113,42 @@ export async function callMultiProviderLLMCoachAPI(
 
 Answer the user's question with deep biomechanical accuracy, progressive calisthenics leverage cues, and sports nutrition science. Keep your answer under 160 words, concise, formatted with clear bullet points and emojis. Be motivating, direct, and helpful!`;
 
-  // 1. GROQ API (ULTRA FAST LLAMA-3.3-70B / LLAMA3-8B)
+  // 1. NVIDIA NIM API (PRIMARY ENGINE)
+  if (provider === 'nvidia') {
+    const apiKey = customApiKey || import.meta.env.VITE_NVIDIA_API_KEY || '';
+    if (apiKey) {
+      try {
+        const response = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'meta/llama-3.1-70b-instruct',
+            messages: [
+              { role: 'system', content: systemInstruction },
+              { role: 'user', content: prompt },
+            ],
+            temperature: 0.7,
+            max_tokens: 350,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const text = data?.choices?.[0]?.message?.content;
+          if (text) return text.trim();
+        } else {
+          console.warn('NVIDIA API Response status:', response.status, await response.text());
+        }
+      } catch (e) {
+        console.warn('NVIDIA NIM API Error:', e);
+      }
+    }
+  }
+
+  // 2. GROQ API FALLBACK
   if (provider === 'groq') {
     const apiKey = customApiKey || import.meta.env.VITE_GROQ_API_KEY || '';
     if (apiKey) {
@@ -146,40 +181,7 @@ Answer the user's question with deep biomechanical accuracy, progressive calisth
     }
   }
 
-  // 2. NVIDIA NIM API (NVIDIA NEMOTRON / LLAMA 3.1 70B)
-  if (provider === 'nvidia') {
-    const apiKey = customApiKey || import.meta.env.VITE_NVIDIA_API_KEY || '';
-    if (apiKey) {
-      try {
-        const response = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'meta/llama-3.1-70b-instruct',
-            messages: [
-              { role: 'system', content: systemInstruction },
-              { role: 'user', content: prompt },
-            ],
-            temperature: 0.7,
-            max_tokens: 350,
-          }),
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          const text = data?.choices?.[0]?.message?.content;
-          if (text) return text.trim();
-        }
-      } catch (e) {
-        console.warn('NVIDIA NIM API Error:', e);
-      }
-    }
-  }
-
-  // 3. GEMINI 1.5 FLASH API
+  // 3. GEMINI 1.5 FLASH API FALLBACK
   if (provider === 'gemini') {
     const apiKey = customApiKey || import.meta.env.VITE_GEMINI_API_KEY || '';
     if (apiKey) {
@@ -211,7 +213,6 @@ Answer the user's question with deep biomechanical accuracy, progressive calisth
     }
   }
 
-  // Dynamic Smart Fallback if API keys aren't set yet
   return generateDynamicSmartFallback(prompt, userContext);
 }
 
