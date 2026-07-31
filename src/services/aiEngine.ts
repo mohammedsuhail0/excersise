@@ -97,20 +97,40 @@ export const ROUTINES_MAP: Record<VibeStage, WorkoutRoutine> = {
 
 export type LLMProvider = 'nvidia' | 'groq' | 'gemini';
 
-// NATURAL HUMAN PERSONAL TRAINER LLM ENGINE
+// NATURAL & MEDICAL SAFETY-FIRST PERSONAL TRAINER LLM ENGINE
 export async function callMultiProviderLLMCoachAPI(
   prompt: string,
   userContext: any,
   provider: LLMProvider = 'nvidia',
   customApiKey?: string
 ): Promise<string> {
-  const systemInstruction = `You are Sensei Goku, a real-life expert personal trainer and calisthenics coach. You talk naturally like a real human bro/coach to your athlete ${userContext.name || 'Goku'} (${userContext.weightKg || 78}kg, ${userContext.heightCm || 180}cm, ${userContext.targetPhysique || 'Anime Aesthetic'} goal).
+  const lowerPrompt = prompt.toLowerCase();
 
-Your Personality & Tone:
-- Talk like a real, passionate, natural human personal trainer. Be direct, encouraging, energetic, and authentic.
-- NEVER sound like a robotic customer service bot or AI assistant. NEVER say "As an AI..." or "As your Calisthenics Coach, I strictly focus on...".
-- If your athlete asks something off-topic (like coding, math, or random stuff), respond naturally in character like a real gym bro/trainer would (e.g., "Bro, I build chest and shoulders, I don't write code! Drop and give me 20 pushups instead 😜").
-- Give practical, high-impact, natural fitness and nutrition advice. Keep responses under 110 words, direct, engaging, and motivating!`;
+  // 1. URGENT MEDICAL EMERGENCY & INJURY SAFETY CHECK
+  const medicalEmergencyKeywords = [
+    'bleeding', 'bleed', 'blood', 'cut', 'wound', 'chest pain', 'dizziness', 
+    'dizzy', 'fainted', 'faint', 'broken', 'fracture', 'dislocated', 'torn', 'severe pain', 'striked'
+  ];
+
+  if (medicalEmergencyKeywords.some((word) => lowerPrompt.includes(word))) {
+    return `🚨 HOLD UP BRO, STOP EXERCISING IMMEDIATELY! 🩸
+If you are bleeding, cut, or severely injured, do NOT do any pushups or workouts!
+1. Apply firm pressure with a clean cloth to stop the bleeding immediately.
+2. Clean and bandage the wound, or seek medical attention right away.
+3. Rest and do NOT strain your body until fully healed. Your health and safety come FIRST! 🙏`;
+  }
+
+  const systemInstruction = `You are Sensei Goku, a real-life expert personal trainer and calisthenics coach. You talk naturally like a real human bro/coach to your athlete ${userContext.name || 'Goku'} (${userContext.weightKg || 78}kg, ${userContext.heightCm || 180}cm).
+
+CRITICAL MEDICAL & INJURY SAFETY RULES (TOP PRIORITY ABOVE ALL):
+- If the user mentions ANY BLEEDING, OPEN WOUNDS, SEVERE INJURY, CUTS, DIZZINESS, CHEST PAIN, SHARP JOINT/MUSCLE TEARS:
+  1. IMMEDIATELY TELL THEM TO STOP ALL EXERCISE!
+  2. Provide urgent, compassionate first-aid guidance (stop bleeding, ice swelling, rest).
+  3. Advise them to seek professional medical attention right away.
+  4. NEVER tell them to do push-ups, pull-ups, or workouts while injured or bleeding!
+
+For normal workout & nutrition questions:
+- Be encouraging, energetic, and natural. Give practical calisthenics cues & diet advice under 100 words.`;
 
   if (provider === 'nvidia') {
     const apiKey = customApiKey || import.meta.env.VITE_NVIDIA_API_KEY || '';
@@ -147,7 +167,7 @@ Your Personality & Tone:
                 { role: 'system', content: systemInstruction },
                 { role: 'user', content: prompt },
               ],
-              temperature: 0.7, // Warm, creative, natural human temperature
+              temperature: 0.6,
               max_tokens: 220,
             }),
           });
@@ -159,7 +179,7 @@ Your Personality & Tone:
             if (text) return text.trim();
           }
         } catch (e) {
-          // Timeout or fetch error -> try next
+          // Timeout or error
         }
       }
     }
@@ -173,17 +193,21 @@ function generateDynamicSmartFallback(prompt: string, userContext: any): string 
   const name = userContext.name || 'Athlete';
   const weight = userContext.weightKg || 78;
 
+  if (lower.includes('bleeding') || lower.includes('bleed') || lower.includes('blood') || lower.includes('cut')) {
+    return `🚨 HOLD UP ${name.toUpperCase()}, STOP EXERCISING IMMEDIATELY! 🩸
+Do NOT do any pushups or workouts if you are bleeding!
+1. Apply firm pressure with a clean towel to stop the bleeding.
+2. Clean and bandage the wound, or go to a doctor if deep.
+3. Rest until fully healed. Your safety is #1! 🙏`;
+  }
+
   if (lower.includes('wrist') || lower.includes('pain') || lower.includes('elbow')) {
-    return `Hey ${name}! Wrist pain on pushing moves means forearms need pre-warming. Turn your hands out 45°, do 10 palm pulses, and claw into the ground! 🔥`;
+    return `Hey ${name}! If it's a minor joint ache, warm up your forearms! Turn hands out 45°, do 10 palm pulses, and claw into the ground. If sharp pain persists, stop and rest! 🔥`;
   }
 
   if (lower.includes('eat') || lower.includes('diet') || lower.includes('food') || lower.includes('protein') || lower.includes('calories')) {
     const protein = Math.round(weight * 2);
     return `Bro, for your ${weight}kg physique goal, aim for ${protein}g protein daily (eggs, chicken, Greek yogurt) plus 220g clean carbs. Keep water at 3.5L! 🥩`;
-  }
-
-  if (lower.includes('python') || lower.includes('code') || lower.includes('script')) {
-    return `Bro, I build chest and shoulders, I don't write Python code! Drop and give me 20 clean pushups instead 😜💪`;
   }
 
   return `Hey ${name}! Focus on progressive leverage, controlled 3-second negatives, and tight core tension. What are we blasting today? 💪`;
