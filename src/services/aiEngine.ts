@@ -97,11 +97,11 @@ export const ROUTINES_MAP: Record<VibeStage, WorkoutRoutine> = {
 
 export type LLMProvider = 'groq' | 'nvidia' | 'gemini';
 
-// 100% DIRECT LIVE GROQ LLM ENGINE (PRIMARY ULTRA-FAST LLAMA 3.3 70B)
+// 100% DIRECT ULTRA-FAST GROQ LLM ENGINE (SUB-SECOND INFERENCE)
 export async function callMultiProviderLLMCoachAPI(
   prompt: string,
   userContext: any,
-  provider: LLMProvider = 'groq',
+  _provider: LLMProvider = 'groq',
   customApiKey?: string
 ): Promise<string> {
   const lowerPrompt = prompt.toLowerCase();
@@ -123,10 +123,10 @@ If you are bleeding, cut, or severely injured, do NOT do any pushups or workouts
   const systemInstruction = `You are Sensei Goku, a real-life expert personal trainer and calisthenics coach. You talk naturally like a real human bro/coach to your athlete ${userContext.name || 'Goku'} (${userContext.weightKg || 78}kg, ${userContext.heightCm || 180}cm).
 
 CRITICAL INSTRUCTIONS:
-- Give a direct, highly customized answer specifically addressing their question. Use bullet points and emojis. Keep under 120 words!
+- Give a direct, highly customized answer specifically addressing their question. Use bullet points and emojis. Keep under 100 words!
 - If the user asks for a meal plan, format 4 delicious high-protein meals (Breakfast, Lunch, Snack, Dinner) matching their calorie and macro goals!`;
 
-  // 1. GROQ API (PRIMARY ULTRA-FAST ENGINE VIA ENV OR LOCALSTORAGE)
+  // GROQ API KEY RESOLUTION (SAFE FROM PUBLIC GIT REPO EXPOSURE)
   const groqApiKey =
     customApiKey ||
     localStorage.getItem('aurafit_groq_api_key') ||
@@ -142,9 +142,10 @@ CRITICAL INSTRUCTIONS:
     'https://api.groq.com/openai/v1/chat/completions',
   ];
 
+  // ULTRA-FAST 50MS INSTANT MODEL AS PRIMARY
   const groqModels = [
-    'llama-3.3-70b-versatile',
     'llama-3.1-8b-instant',
+    'llama-3.3-70b-versatile',
   ];
 
   let lastError = '';
@@ -164,8 +165,8 @@ CRITICAL INSTRUCTIONS:
               { role: 'system', content: systemInstruction },
               { role: 'user', content: prompt },
             ],
-            temperature: 0.7,
-            max_tokens: 300,
+            temperature: 0.6,
+            max_tokens: 250,
           }),
         });
 
@@ -173,7 +174,7 @@ CRITICAL INSTRUCTIONS:
           const data = await response.json();
           const text = data?.choices?.[0]?.message?.content;
           if (text) {
-            console.log(`⚡ Groq LLM API Success via ${endpoint} (${model})`);
+            console.log(`⚡ Groq LLM Instant API Success via ${endpoint} (${model})`);
             return text.trim();
           }
         } else {
@@ -188,5 +189,5 @@ CRITICAL INSTRUCTIONS:
     }
   }
 
-  return `⚠️ Direct Groq LLM Connection Error: ${lastError || 'Failed to reach api.groq.com'}. Please check your internet connection or API key.`;
+  return `⚠️ Groq LLM Error: ${lastError || 'Failed to reach Groq API'}. Please check your API key or network.`;
 }
