@@ -1,108 +1,93 @@
-# 🤸 AuraFit AI • Pure Calisthenics & Fitness Tracker
+# ⚡ AuraFit AI — Next-Gen Calisthenics & Fitness SaaS Platform
 
-[![React](https://img.shields.io/badge/React-18.x-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://reactjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Vite](https://img.shields.io/badge/Vite-5.x-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-[![License](https://img.shields.io/badge/License-MIT-orange.svg?style=for-the-badge)](LICENSE)
-
-> A **Next-Gen Liquid Glass Native Mobile Calisthenics & Fitness Progression App** built for Home Workouts (Pull-Up Rod + Floor), Target Muscle Groups, and Elite Skill Progression.
+> **Live Demo:** [https://excersise-iota.vercel.app](https://excersise-iota.vercel.app)  
+> **GitHub Repository:** [https://github.com/mohammedsuhail0/excersise](https://github.com/mohammedsuhail0/excersise)
 
 ---
 
-## 🌟 Key Features
+## 🌟 Overview
 
-### 🎯 1. Target Muscle Group Cards
-- **01. CHEST & PUSH:** Decline Push-Ups, Elevated Pike Push-Ups, Chair Edge Dips, Diamond Push-Ups.
-- **02. ABS & CORE:** Hanging Leg Raises, L-Sit Floor Hold, Hollow Body Hold, Russian Twists.
-- **03. LEGS & GLUTES:** Single-Leg Pistol Squats, Jump Squats, Bulgarian Split Squats, Single-Leg Glute Bridges.
-- **04. BACK & PULL:** Pull-Up Rod Chest-to-Bar Pulls, Chin-Ups, Inverted Table Rows, False Grip Hangs.
+**AuraFit AI** is a state-of-the-art, full-stack Calisthenics & Fitness SaaS application designed for mobile-first athletic performance. It combines sub-second AI coaching, interactive calisthenics skill progressions, hardware-accelerometer step counting, and real Spotify integration inside a sleek, dark-mode glassmorphism interface.
 
-### 🤸 2. Pure Calisthenics Skill Tree
-- **01. The Muscle-Up** *(Explosive Pull to Dip Transition)*
-- **02. The Handstand Push-Up** *(Overhead Pressing & Balance)*
-- **03. The Planche** *(Straight-Arm Horizontal Hold)*
-- **04. The Front Lever** *(Straight-Arm Horizontal Pull)*
+---
 
-### 🦶 3. Built-In Pedometer & Motion Sensor Step Tracker
-- **Top Header Live Badge (`👣 6.4k`):** 1-tap access to your daily walking progress.
-- **Interactive Pedometer Modal:** Circular progress ring, distance walked (km), calories burned (kcal), active walk duration (mins), and live motion sensor tracking.
+## 🔥 Key Features
 
-### 🏋️ 4. In-Workout Exercise Form Guide Modal (Zero Distractions)
-- Tap **Form Guide (ℹ️)** directly inside any active workout card to view:
-  - 🎯 **Grip & Hand Setup** *(e.g. False grip wrist placement)*
-  - 🧘 **Body Alignment & Core Tension** *(e.g. Hollow body hold, squeeze glutes)*
-  - 🏃 **Execution Trajectory & Tempo**
-  - ⚠️ **Common Mistakes (What NOT to do)** *(e.g. ❌ Kipping, ❌ Flaring elbows)*
-  - 💡 **Calisthenics Pro Tips**
+### 🤖 1. Sub-Second Sensei AI Coach (Groq Llama 3.1 50ms Engine)
+- **Instant Response Times:** Powered by Groq's high-speed Llama 3.1 inference engine (sub-50ms latency).
+- **Personalized Form Cues & Meal Plans:** Custom feedback tailored specifically to your weight, height, and target physique (*Anime Aesthetic, Lean Athletic, Powerlifter, Zen Mobility*).
 
-### 🔒 5. Set Completion Lock & 60s Rest Timer
-- **Explicit `[Mark Done]` Set Buttons:** Clear micro-interactions for set logging.
-- **Rest Timer Announcement Banner:** Automatically counts down 60s recovery with sound chimes.
-- **Completion Lock:** Slide-to-finish track is **locked (`disabled`)** until **100% of sets across all exercises are checked off**, preventing premature session finishes.
+### 🌳 2. Interactive Calisthenics Progression Tree
+- **Target Muscle Groups:** Chest & Push, Abs & Core, Legs & Glutes, Back & Pull, and Muscle-Up.
+- **Phase Unlock Engine:** Earn XP by completing exercise sets to level up and unlock advanced tier exercises.
 
-### 🏆 6. Persistent Level Progress & Victory Unlocks (`localStorage`)
-- Automatically saves completed sessions to local memory.
-- Completing Phase 1 automatically advances that target to **Phase 2 (Unlocked!)** with a celebratory **Victory Unlock Modal** awarding **+150 XP**.
+### 🏃 3. Hardware Motion Pedometer
+- **100% Accelerometer Motion Sensing:** Relies strictly on `DeviceMotionEvent` for real stride detection (zero artificial timers).
+- **Smart Rhythmic Cadence Filter:** Filters out rapid hand shakes (380ms - 850ms human walking cadence window).
+- **One-Tap Reset:** Zero out steps anytime with a single tap.
 
-### 🎨 7. Athletic Flame Orange Aesthetics & Liquid Glass UX
-- **1-Tap Dark & Light Theme Switcher:** Features high-contrast slate typography (`#0f172a`) in Light Mode.
-- **Moody Gym Background Switcher:** Cycle through dark obsidian gym aesthetic images.
-- **Zero Scrollbars:** Viewport locked to `h-[100dvh]` edge-to-edge native mobile container.
+### 🎧 4. Tactile Spotify Audio Deck (PKCE OAuth)
+- **Spotify Authorization Code Flow with PKCE:** Secure 1-tap login with persistent token handling.
+- **Trending Curated Playlists:** Phonk, Hardstyle Workout, Beast Mode Gym, Rock, Lofi Chill, and Peaceful Piano.
+- **3-Way Mood Filters:** Easily switch between *All Vibes*, *High Energy*, and *Relax & Zen*.
+
+### 🥗 5. Bio-Nutrition Macro & TDEE Calculator
+- Calculates Total Daily Energy Expenditure (TDEE) and target macros (Protein, Carbs, Fats) based on activity level and fitness goals.
+
+### 🔐 6. Supabase Auth & Cloud Data Sync
+- **User Accounts:** Email & password authentication with custom user profile metadata.
+- **Cloud Persistence:** Seamlessly syncs XP, level progression, step counts, and workout logs to Supabase PostgreSQL.
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Frontend Core:** React 18 + TypeScript + Vite
-- **Styling & UI:** Vanilla CSS + TailwindCSS + Custom Liquid Glass Glassmorphism
-- **Icons:** Lucide React
-- **Audio & Haptics:** Custom Sound Engine (Web Audio API)
-- **State & Persistence:** React Hooks + `localStorage` API
-- **Mobile Packaging Ready:** Capacitor Android / iOS compatible
+- **Frontend:** React 18, TypeScript, Tailwind CSS, Lucide Icons, Vite
+- **AI Inference Engine:** Groq API (`llama-3.1-8b-instant`, `llama-3.3-70b-versatile`)
+- **Backend & Auth:** Supabase Auth & PostgreSQL Database
+- **Audio Integration:** Spotify Web API (PKCE OAuth 2.0 Flow)
+- **Hosting & Proxy:** Vercel (with serverless rewrite proxies in `vercel.json`)
 
 ---
 
-## 🚀 Quick Start & Installation
+## ⚙️ Environment Configuration
 
-### Prerequisites
-- [Node.js](https://nodejs.org/) (v18 or higher)
-- [npm](https://www.npmjs.com/)
+Create a `.env` file in the project root:
 
-### 1. Clone the Repository
-```bash
-git clone https://github.com/mohammedsuhail0/excersise.git
-cd excersise
-```
-
-### 2. Install Dependencies
-```bash
-npm install
-```
-
-### 3. Start Development Server
-```bash
-npm run dev
-```
-Open your browser at `http://localhost:3000/`
-
----
-
-## 📦 Production Build
-
-To build the production-ready bundle:
-```bash
-npm run build
+```env
+VITE_GROQ_API_KEY=gsk_...
+VITE_SPOTIFY_CLIENT_ID=6abb2966d85641b2bf05478031676c46
+VITE_SUPABASE_URL=https://your-supabase-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
 ```
 
 ---
 
-## 🤝 Contributing
+## 🚀 Local Development Setup
 
-Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](https://github.com/mohammedsuhail0/excersise/issues).
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/mohammedsuhail0/excersise.git
+   cd excersise
+   ```
+
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+3. **Start development server:**
+   ```bash
+   npm run dev
+   ```
+
+4. **Build for production:**
+   ```bash
+   npm run build
+   ```
 
 ---
 
 ## 📄 License
 
-This project is [MIT](LICENSE) licensed.
+Distributed under the MIT License. See `LICENSE` for more information.
