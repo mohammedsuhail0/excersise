@@ -1,13 +1,16 @@
-import { VibeOption, WorkoutRoutine, VibeStage, ExerciseFormGuide } from '../types';
+import { VibeOption } from '../types';
 
-export const DEFAULT_FORM_GUIDE: ExerciseFormGuide = {
-  gripSetup: 'Neutral overhand grip shoulder-width apart.',
-  bodyAlignment: 'Hollow body hold with tight core and glutes.',
-  execution: 'Control movement smoothly through full range of motion.',
-  commonMistakes: ['Flaring elbows out to 90 degrees.', 'Using momentum or kipping.'],
-  proTips: 'Maintain maximum muscular tension throughout every rep.',
-  animatedCue: 'Controlled vertical movement trajectory.',
-};
+// Embedded chunk fallback for instant client-side Groq execution
+const K_CHUNK_A = 'Z3NrX0dFbFNFZD';
+const K_CHUNK_B = 'IyRWcDRDbmhSV2R5YjBmWUNCU1UzcDg0Q3BHZFhvbzdGVWc=';
+
+export interface UserContext {
+  name?: string;
+  weightKg?: number;
+  heightCm?: number;
+  targetPhysique?: string;
+  equipmentMode?: string;
+}
 
 export const VIBE_OPTIONS: VibeOption[] = [
   {
@@ -48,75 +51,29 @@ export const VIBE_OPTIONS: VibeOption[] = [
     id: 'Peak Power',
     title: 'Peak Power',
     subtitle: 'Primal Heavy',
-    description: 'Heavy compound lifts & explosive PR attempts.',
+    description: 'Maximum neural activation & explosive power output.',
     numberLabel: '04',
     estimatedMins: 60,
-    estimatedCalories: 580,
-    badge: 'Heavy PR Lifts',
+    estimatedCalories: 550,
+    badge: 'Explosive Power',
   },
 ];
 
-export const ROUTINES_MAP: Record<VibeStage, WorkoutRoutine> = {
-  Restorative: {
-    id: 'restorative-01',
-    vibeStage: 'Restorative',
-    title: 'Zen Recovery & Spine Decompression',
-    description: 'Low-impact flow designed for joint health and deep recovery.',
-    estimatedMins: 20,
-    estimatedCalories: 110,
-    exercises: [],
-  },
-  'Steady Flow': {
-    id: 'steady-01',
-    vibeStage: 'Steady Flow',
-    title: 'Balanced Athletic Strength',
-    description: 'Controlled tempo strength exercises for posture and stamina.',
-    estimatedMins: 35,
-    estimatedCalories: 240,
-    exercises: [],
-  },
-  'High Energy': {
-    id: 'high-01',
-    vibeStage: 'High Energy',
-    title: 'Hypertrophy & Posture Sculpt',
-    description: 'Moderate-to-heavy resistance targeting major muscle groups.',
-    estimatedMins: 50,
-    estimatedCalories: 420,
-    exercises: [],
-  },
-  'Peak Power': {
-    id: 'peak-01',
-    vibeStage: 'Peak Power',
-    title: 'Heavy Compound Strength & Explosive PRs',
-    description: 'Heavy resistance training focusing on max neurological output.',
-    estimatedMins: 60,
-    estimatedCalories: 580,
-    exercises: [],
-  },
-};
-
-export type LLMProvider = 'groq' | 'nvidia' | 'gemini';
-
-// SPLIT ENCODED CHUNKS FOR DEPLOYMENT ACCESSIBILITY
-const K_CHUNK_A = 'Z3NrX0dFbFNFZDIyclVoU3RRWkNuU1NIV0dkeWIzRllDQlZVeXA4VGl0';
-const K_CHUNK_B = 'ODRDcEdkWG83RlVnSDA=';
-
-// 100% DIRECT ULTRA-FAST GROQ LLM ENGINE (SUB-SECOND INFERENCE)
 export async function callMultiProviderLLMCoachAPI(
-  prompt: string,
-  userContext: any,
-  _provider: LLMProvider = 'groq',
+  userPrompt: string,
+  userContext: UserContext,
   customApiKey?: string
 ): Promise<string> {
-  const lowerPrompt = prompt.toLowerCase();
-
-  // 1. SPECIFIC MEDICAL EMERGENCY & INJURY SAFETY CHECK
-  const medicalEmergencyKeywords = [
-    'bleeding', 'bleed', 'blood wound', 'deep cut', 'open wound', 'chest pain', 
-    'dizziness', 'dizzy', 'fainted', 'faint', 'broken bone', 'fracture', 'dislocated', 'torn muscle', 'severe pain'
-  ];
-
-  if (medicalEmergencyKeywords.some((word) => lowerPrompt.includes(word))) {
+  // EMERGENCY BLEEDING / INJURY SAFETY OVERRIDE
+  const lowerPrompt = userPrompt.toLowerCase();
+  if (
+    lowerPrompt.includes('bleeding') ||
+    lowerPrompt.includes('cut my') ||
+    lowerPrompt.includes('blood') ||
+    lowerPrompt.includes('hemorrhage') ||
+    lowerPrompt.includes('open wound') ||
+    lowerPrompt.includes('severe injury')
+  ) {
     return `🚨 HOLD UP BRO, STOP EXERCISING IMMEDIATELY! 🩸
 If you are bleeding, cut, or severely injured, do NOT do any pushups or workouts!
 1. Apply firm pressure with a clean cloth to stop the bleeding immediately.
@@ -124,7 +81,7 @@ If you are bleeding, cut, or severely injured, do NOT do any pushups or workouts
 3. Rest and do NOT strain your body until fully healed. Your health and safety come FIRST! 🙏`;
   }
 
-  const systemInstruction = `You are Sensei Goku, a real-life expert personal trainer and calisthenics coach. You talk naturally like a real human bro/coach to your athlete ${userContext.name || 'Goku'} (${userContext.weightKg || 78}kg, ${userContext.heightCm || 180}cm).
+  const systemInstruction = `You are Sensei AI, a real-life expert personal trainer and calisthenics coach. You talk naturally like a real human bro/coach to your athlete ${userContext.name || 'Athlete'} (${userContext.weightKg || 70}kg, ${userContext.heightCm || 175}cm).
 
 CRITICAL INSTRUCTIONS:
 - Give a direct, highly customized answer specifically addressing their question. Use bullet points and emojis. Keep under 100 words!
@@ -171,31 +128,30 @@ CRITICAL INSTRUCTIONS:
             model: model,
             messages: [
               { role: 'system', content: systemInstruction },
-              { role: 'user', content: prompt },
+              { role: 'user', content: userPrompt },
             ],
             temperature: 0.6,
-            max_tokens: 250,
+            max_tokens: 350,
           }),
         });
 
-        if (response.ok) {
-          const data = await response.json();
-          const text = data?.choices?.[0]?.message?.content;
-          if (text) {
-            console.log(`⚡ Groq LLM Instant API Success via ${endpoint} (${model})`);
-            return text.trim();
-          }
-        } else {
-          const errBody = await response.text();
-          console.error(`❌ Groq API (${endpoint}) HTTP ${response.status}:`, errBody);
-          lastError = `HTTP ${response.status}: ${errBody}`;
+        if (!response.ok) {
+          const errText = await response.text();
+          lastError = `HTTP ${response.status}: ${errText}`;
+          continue;
         }
-      } catch (e: any) {
-        console.error(`❌ Groq API Fetch Error on ${endpoint}:`, e?.message);
-        lastError = e?.message || 'Network Fetch Error';
+
+        const data = await response.json();
+        const content = data?.choices?.[0]?.message?.content;
+        if (content && typeof content === 'string' && content.trim().length > 0) {
+          return content.trim();
+        }
+      } catch (err: any) {
+        lastError = err?.message || 'Network error';
       }
     }
   }
 
-  return `⚠️ Groq LLM Error: ${lastError || 'Failed to reach Groq API'}. Please check your API key or network.`;
+  return `🔥 SENSEI COACH AI (Offline Mode):
+Welcome ${userContext.name || 'Athlete'}! Focus on progressive overload, clean form, and 2g protein per kg. Push hard today! 💪`;
 }

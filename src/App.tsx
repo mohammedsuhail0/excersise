@@ -12,6 +12,7 @@ import { AICalisthenicsCoachModal } from './components/AICalisthenicsCoachModal'
 import { LandingPage } from './components/LandingPage';
 import { AuthModal } from './components/AuthModal';
 import { AccountProfileModal } from './components/AccountProfileModal';
+import { StreakModal } from './components/StreakModal';
 
 import { UserProfile, FeatureConfig, SetLog, CalisthenicsExercise, EquipmentMode, WorkoutRoutine } from './types';
 import { TARGET_MUSCLE_GROUPS } from './data/calisthenicsTree';
@@ -86,6 +87,7 @@ export function App() {
   const [isAICoachOpen, setIsAICoachOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isAccountProfileOpen, setIsAccountProfileOpen] = useState(false);
+  const [isStreakOpen, setIsStreakOpen] = useState(false);
   const [selectedFormGuideExercise, setSelectedFormGuideExercise] = useState<CalisthenicsExercise | null>(null);
   const [themeMode, setThemeMode] = useState<'dark' | 'light'>('dark');
   const [bgIndex, setBgIndex] = useState(0);
@@ -334,6 +336,7 @@ export function App() {
               onOpenSettings={() => setIsSettingsOpen(true)}
               onOpenStepCounter={() => setIsStepCounterOpen(true)}
               onOpenAccountProfile={() => setIsAccountProfileOpen(true)}
+              onOpenStreakModal={() => setIsStreakOpen(true)}
             />
           </div>
         )}
@@ -463,6 +466,14 @@ export function App() {
           user={user}
           onUpdateProfile={(updated) => setUser((prev) => ({ ...prev, ...updated }))}
           onSignOut={handleSignOut}
+        />
+
+        {/* DAILY STREAK MODAL */}
+        <StreakModal
+          isOpen={isStreakOpen}
+          onClose={() => setIsStreakOpen(false)}
+          user={user}
+          onUpdateUser={(updated) => setUser((prev) => ({ ...prev, ...updated }))}
         />
 
         {/* MACRO & CALORIE CALCULATOR MODAL */}

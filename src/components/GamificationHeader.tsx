@@ -11,6 +11,7 @@ interface GamificationHeaderProps {
   onOpenSettings: () => void;
   onOpenStepCounter?: () => void;
   onOpenAccountProfile?: () => void;
+  onOpenStreakModal?: () => void;
 }
 
 export const GamificationHeader: React.FC<GamificationHeaderProps> = ({
@@ -22,6 +23,7 @@ export const GamificationHeader: React.FC<GamificationHeaderProps> = ({
   onOpenSettings,
   onOpenStepCounter,
   onOpenAccountProfile,
+  onOpenStreakModal,
 }) => {
   return (
     <div className="w-full flex items-center justify-between gap-1 select-none animate-fade-up">
@@ -55,11 +57,15 @@ export const GamificationHeader: React.FC<GamificationHeaderProps> = ({
 
       {/* RIGHT: CLEAN COMPACT INLINE BADGES (STREAK, COMPACT STEPS, THEME, BG, SETTINGS) */}
       <div className="flex items-center space-x-1 overflow-x-auto no-scrollbar">
-        {/* STREAK DAYS */}
-        <div className="liquid-glass rounded-full px-1.5 py-0.5 flex items-center space-x-1 text-[9px] font-bold text-white shrink-0">
+        {/* CLICKABLE STREAK DAYS BUTTON */}
+        <button
+          onClick={onOpenStreakModal}
+          className="liquid-glass rounded-full px-2 py-0.5 flex items-center space-x-1 text-[9px] font-bold text-white shrink-0 hover:border-orange-500/40 transition-colors cursor-pointer"
+          title="Open Daily Streak Tracker"
+        >
           <Flame className="w-2.5 h-2.5 text-orange-400 fill-orange-400" />
           <span>{user.streakDays}d</span>
-        </div>
+        </button>
 
         {/* COMPACT PEDOMETER STEP COUNTER BUTTON */}
         {onOpenStepCounter && (

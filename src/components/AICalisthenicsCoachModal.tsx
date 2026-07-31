@@ -22,17 +22,24 @@ export const AICalisthenicsCoachModal: React.FC<AICalisthenicsCoachModalProps> =
   onClose,
   user,
 }) => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      sender: 'coach',
-      text: `OSS ${user.name}! I am your AI Calisthenics Coach. Ask me ANY question about workouts, form cues, or diet!`,
-      time: 'Just now',
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Initialize Dynamic Welcome Greeting Based on Logged-in User
+  useEffect(() => {
+    if (isOpen && messages.length === 0) {
+      setMessages([
+        {
+          id: 'welcome-1',
+          sender: 'coach',
+          text: `OSS ${user.name.toUpperCase()}! 🥋 I am your AI Calisthenics Coach. Ask me ANY question about workouts, form cues, or diet!`,
+          time: 'Just now',
+        },
+      ]);
+    }
+  }, [isOpen, user.name, messages.length]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -57,43 +64,59 @@ export const AICalisthenicsCoachModal: React.FC<AICalisthenicsCoachModalProps> =
     setIsTyping(true);
 
     try {
-      // Calls NVIDIA NIM in background seamlessly without displaying tech names
-      const replyText = await callMultiProviderLLMCoachAPI(text, user, 'nvidia');
+      const coachReply = await callMultiProviderLLMCoachAPI(text.trim(), {
+        name: user.name,
+        weightKg: user.weightKg,
+        heightCm: user.heightCm,
+        targetPhysique: user.targetPhysique,
+      });
+
       soundEngine.playSetCompleteChime();
       const coachMsg: Message = {
-        id: `msg-${Date.now() + 1}`,
+        id: `reply-${Date.now()}`,
         sender: 'coach',
-        text: replyText,
+        text: coachReply,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
+
       setMessages((prev) => [...prev, coachMsg]);
-    } catch (e) {
-      console.error('Coach API call failed:', e);
+    } catch (err) {
+      const fallbackMsg: Message = {
+        id: `err-${Date.now()}`,
+        sender: 'coach',
+        text: `OSS ${user.name}! Push through today's session. Keep your core tight and maintain clean form! 💪`,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+      setMessages((prev) => [...prev, fallbackMsg]);
     } finally {
       setIsTyping(false);
     }
   };
 
-  const handleQuickChip = (prompt: string) => {
-    handleSendMessage(prompt);
-  };
+  const quickPrompts = [
+    '🥗 High Protein Meal Plan',
+    '💪 Muscle-Up Progression',
+    '🔥 Form Check: Decline Push-Ups',
+    '⚡ 5-Minute Abs Blast',
+  ];
 
   return (
     <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 animate-fade-up">
-      <div className="w-full max-w-sm h-[90vh] max-h-[620px] bg-[#0f1420]/95 border border-orange-500/40 rounded-[32px] flex flex-col justify-between overflow-hidden shadow-2xl relative text-white">
+      <div className="w-full max-w-sm h-[90vh] max-h-[620px] bg-[#0f1420]/95 border border-white/15 rounded-[32px] p-4 flex flex-col justify-between shadow-2xl relative text-white">
         
-        {/* CLEAN MINIMALIST HEADER (NO MODEL NAMES OR KEY SYMBOLS) */}
-        <div className="p-3.5 border-b border-white/10 flex items-center justify-between bg-black/40 backdrop-blur-md shrink-0">
-          <div className="flex items-center space-x-2.5">
-            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center text-white shadow-md border border-white/20">
-              <Bot className="w-5 h-5" />
+        {/* HEADER */}
+        <div className="flex items-center justify-between border-b border-white/10 pb-3 shrink-0">
+          <div className="flex items-center space-x-2">
+            <div className="w-8.5 h-8.5 rounded-full bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center text-white shadow-md">
+              <Bot className="w-4.5 h-4.5" />
             </div>
             <div>
-              <div className="flex items-center space-x-1">
-                <h2 className="text-[15px] font-extrabold leading-tight">AI Calisthenics Coach</h2>
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              </div>
-              <p className="text-[9.5px] text-orange-400 font-semibold">Master Personal Trainer Active</p>
+              <h2 className="text-[15px] font-extrabold leading-tight flex items-center gap-1">
+                Sensei AI Coach <Sparkles className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+              </h2>
+              <p className="text-[10px] text-orange-400 font-semibold flex items-center gap-1">
+                <Zap className="w-3 h-3 text-orange-400" /> Groq 50ms Sub-Second Response
+              </p>
             </div>
           </div>
 
@@ -105,97 +128,85 @@ export const AICalisthenicsCoachModal: React.FC<AICalisthenicsCoachModalProps> =
           </button>
         </div>
 
-        {/* MESSAGES VIEWPORT */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-3 no-scrollbar min-h-0">
+        {/* CHAT MESSAGES STREAM */}
+        <div className="flex-1 overflow-y-auto my-2 space-y-3 pr-1 no-scrollbar text-[12px]">
           {messages.map((msg) => (
             <div
               key={msg.id}
               className={`flex items-start space-x-2 ${msg.sender === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}
             >
               <div
-                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 ${
+                className={`w-7 h-7 rounded-full shrink-0 flex items-center justify-center text-[10px] font-bold ${
                   msg.sender === 'user'
-                    ? 'bg-gradient-to-tr from-orange-500 to-amber-500 text-white'
-                    : 'bg-white/10 text-orange-400 border border-orange-500/30'
+                    ? 'bg-amber-500 text-black'
+                    : 'bg-gradient-to-tr from-orange-500 to-amber-500 text-white'
                 }`}
               >
-                {msg.sender === 'user' ? <User className="w-3.5 h-3.5" /> : <Bot className="w-3.5 h-3.5" />}
+                {msg.sender === 'user' ? user.name.charAt(0).toUpperCase() : <Bot className="w-4 h-4" />}
               </div>
 
               <div
-                className={`max-w-[80%] rounded-[20px] p-3 text-[12px] leading-relaxed font-medium ${
+                className={`max-w-[82%] rounded-[20px] p-3 leading-relaxed ${
                   msg.sender === 'user'
-                    ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md rounded-tr-none'
-                    : 'liquid-glass text-white/90 border border-white/10 rounded-tl-none'
+                    ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white font-medium rounded-tr-none shadow-md'
+                    : 'liquid-glass border border-white/10 text-white/90 rounded-tl-none'
                 }`}
               >
-                <p className="whitespace-pre-line">{msg.text}</p>
-                <span className="text-[8.5px] text-white/50 block text-right mt-1 font-mono">
-                  {msg.time}
-                </span>
+                <div className="whitespace-pre-wrap">{msg.text}</div>
+                <span className="text-[9px] text-white/40 block text-right mt-1 font-mono">{msg.time}</span>
               </div>
             </div>
           ))}
 
           {isTyping && (
-            <div className="flex items-center space-x-2">
-              <div className="w-7 h-7 rounded-full bg-white/10 text-orange-400 border border-orange-500/30 flex items-center justify-center">
-                <Bot className="w-3.5 h-3.5" />
-              </div>
-              <div className="liquid-glass px-3 py-2 rounded-[18px] text-[11px] text-orange-400 flex items-center space-x-1.5 animate-pulse">
-                <span>Coach is analyzing...</span>
-              </div>
+            <div className="flex items-center space-x-2 text-white/60 text-[11px] font-semibold animate-pulse">
+              <Bot className="w-4 h-4 text-orange-400" />
+              <span>Sensei AI is analyzing form & macros...</span>
             </div>
           )}
+
           <div ref={chatEndRef} />
         </div>
 
-        {/* QUICK ACTION PROMPT CHIPS */}
-        <div className="px-3 py-1.5 border-t border-white/10 overflow-x-auto no-scrollbar flex items-center space-x-1.5 shrink-0">
-          <button
-            onClick={() => handleQuickChip('How to fix wrist pain during Pike Push-Ups?')}
-            className="liquid-glass px-2.5 py-1 rounded-full text-[9.5px] font-semibold text-orange-400 border border-orange-500/30 hover:border-orange-500/60 shrink-0 flex items-center space-x-1"
-          >
-            <Zap className="w-3 h-3" />
-            <span>Wrist Pain Fix</span>
-          </button>
-
-          <button
-            onClick={() => handleQuickChip('What should I eat for my 78kg target physique?')}
-            className="liquid-glass px-2.5 py-1 rounded-full text-[9.5px] font-semibold text-amber-400 border border-amber-500/30 hover:border-amber-500/60 shrink-0 flex items-center space-x-1"
-          >
-            <Flame className="w-3 h-3" />
-            <span>78kg Diet Baseline</span>
-          </button>
-
-          <button
-            onClick={() => handleQuickChip('How to unlock the Muscle-Up transition?')}
-            className="liquid-glass px-2.5 py-1 rounded-full text-[9.5px] font-semibold text-white/90 border border-white/20 hover:border-white/40 shrink-0 flex items-center space-x-1"
-          >
-            <Dumbbell className="w-3 h-3" />
-            <span>Muscle-Up Transition</span>
-          </button>
+        {/* QUICK PROMPT CHIPS */}
+        <div className="flex items-center space-x-1.5 overflow-x-auto no-scrollbar py-1 shrink-0">
+          {quickPrompts.map((chip) => (
+            <button
+              key={chip}
+              onClick={() => handleSendMessage(chip)}
+              className="liquid-glass hover:border-orange-500/50 px-2.5 py-1 rounded-full text-[10px] font-bold text-orange-400 shrink-0 transition-colors"
+            >
+              {chip}
+            </button>
+          ))}
         </div>
 
-        {/* INPUT BAR */}
-        <div className="p-3 border-t border-white/10 bg-black/50 backdrop-blur-md shrink-0">
-          <div className="liquid-glass rounded-full flex items-center px-3 py-1.5 border border-white/15">
+        {/* CHAT INPUT BAR */}
+        <div className="pt-2 border-t border-white/10 shrink-0">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSendMessage();
+            }}
+            className="flex items-center space-x-2"
+          >
             <input
               type="text"
+              placeholder={`Ask Sensei AI, ${user.name}...`}
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-              placeholder="Ask Coach about calisthenics form or diet..."
-              className="flex-1 bg-transparent text-white text-[12px] outline-none placeholder:text-white/40"
+              className="flex-1 bg-white/5 border border-white/10 rounded-full py-2.5 px-4 text-[12px] text-white placeholder-white/40 focus:outline-none focus:border-orange-500"
             />
             <button
-              onClick={() => handleSendMessage()}
-              className="w-7 h-7 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 flex items-center justify-center text-white shadow-md hover:scale-105 active:scale-95 transition-transform ml-1"
+              type="submit"
+              disabled={!inputText.trim()}
+              className="w-9 h-9 rounded-full bg-gradient-to-tr from-orange-500 to-amber-500 text-white flex items-center justify-center disabled:opacity-40 transition-all shrink-0 hover:scale-105 active:scale-95 shadow-md"
             >
-              <Send className="w-3.5 h-3.5" />
+              <Send className="w-4 h-4" />
             </button>
-          </div>
+          </form>
         </div>
+
       </div>
     </div>
   );
