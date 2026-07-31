@@ -97,7 +97,7 @@ export const ROUTINES_MAP: Record<VibeStage, WorkoutRoutine> = {
 
 export type LLMProvider = 'nvidia' | 'groq' | 'gemini';
 
-// LIVE MULTI-PROVIDER LLM ENGINE WITH DIRECT NVIDIA NIM INFERENCE
+// LIVE NVIDIA NIM LLM ENGINE (DEFAULTS TO NVIDIA NIM LLAMA-3.1-70B)
 export async function callMultiProviderLLMCoachAPI(
   prompt: string,
   userContext: any,
@@ -120,112 +120,119 @@ Answer the user's question with deep biomechanical accuracy, progressive calisth
       return `⚠️ NVIDIA API Key missing. Please paste your NVIDIA API Key (nvapi-...) to activate live Llama 3.1 70B AI responses!`;
     }
 
-    // Try primary & fallback NVIDIA models
+    const endpointsToTry = [
+      '/api/nvidia/v1/chat/completions',
+      'https://integrate.api.nvidia.com/v1/chat/completions',
+    ];
+
     const modelsToTry = [
       'meta/llama-3.1-70b-instruct',
       'nvidia/llama-3.1-nemotron-70b-instruct',
       'meta/llama3-70b-instruct',
     ];
 
-    for (const model of modelsToTry) {
+    for (const endpoint of endpointsToTry) {
+      for (const model of modelsToTry) {
+        try {
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: model,
+              messages: [
+                { role: 'system', content: systemInstruction },
+                { role: 'user', content: prompt },
+              ],
+              temperature: 0.7,
+              max_tokens: 350,
+            }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            const text = data?.choices?.[0]?.message?.content;
+            if (text) return text.trim();
+          } else {
+            console.warn(`NVIDIA API endpoint ${endpoint} model ${model} failed (${response.status})`);
+          }
+        } catch (e) {
+          console.warn(`NVIDIA API endpoint ${endpoint} error:`, e);
+        }
+      }
+    }
+  }
+
+  // 2. GROQ API FALLBACK
+  if (provider === 'groq') {
+    const apiKey = customApiKey || import.meta.env.VITE_GROQ_API_KEY || '';
+    if (apiKey) {
+      const endpointsToTry = [
+        '/api/groq/openai/v1/chat/completions',
+        'https://api.groq.com/openai/v1/chat/completions',
+      ];
+      for (const endpoint of endpointsToTry) {
+        try {
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'llama-3.3-70b-versatile',
+              messages: [
+                { role: 'system', content: systemInstruction },
+                { role: 'user', content: prompt },
+              ],
+              temperature: 0.7,
+              max_tokens: 350,
+            }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            const text = data?.choices?.[0]?.message?.content;
+            if (text) return text.trim();
+          }
+        } catch (e) {
+          console.warn('Groq API Error:', e);
+        }
+      }
+    }
+  }
+
+  // 3. GEMINI 1.5 FLASH API FALLBACK
+  if (provider === 'gemini') {
+    const apiKey = customApiKey || import.meta.env.VITE_GEMINI_API_KEY || '';
+    if (apiKey) {
       try {
-        const response = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: model,
-            messages: [
-              { role: 'system', content: systemInstruction },
-              { role: 'user', content: prompt },
-            ],
-            temperature: 0.7,
-            max_tokens: 350,
-          }),
-        });
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [
+                {
+                  role: 'user',
+                  parts: [{ text: `${systemInstruction}\n\nUser Question: ${prompt}` }],
+                },
+              ],
+            }),
+          }
+        );
 
         if (response.ok) {
           const data = await response.json();
-          const text = data?.choices?.[0]?.message?.content;
+          const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
           if (text) return text.trim();
-        } else {
-          const errText = await response.text();
-          console.error(`NVIDIA API model ${model} failed (${response.status}):`, errText);
         }
       } catch (e) {
-        console.error(`NVIDIA NIM API model ${model} network error:`, e);
+        console.warn('Gemini API Error:', e);
       }
-    }
-  }
-
-  // 2. GROQ API
-  if (provider === 'groq') {
-    const apiKey = customApiKey || import.meta.env.VITE_GROQ_API_KEY || '';
-    if (!apiKey) {
-      return `⚠️ Groq API Key missing. Please paste your Groq API Key (gsk_...) to activate Llama 3.3 70B!`;
-    }
-
-    try {
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          messages: [
-            { role: 'system', content: systemInstruction },
-            { role: 'user', content: prompt },
-          ],
-          temperature: 0.7,
-          max_tokens: 350,
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const text = data?.choices?.[0]?.message?.content;
-        if (text) return text.trim();
-      }
-    } catch (e) {
-      console.error('Groq LLM API Error:', e);
-    }
-  }
-
-  // 3. GEMINI 1.5 FLASH API
-  if (provider === 'gemini') {
-    const apiKey = customApiKey || import.meta.env.VITE_GEMINI_API_KEY || '';
-    if (!apiKey) {
-      return `⚠️ Gemini API Key missing. Please paste your Gemini API Key (AIzaSy...) to activate Gemini Flash!`;
-    }
-
-    try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [
-              {
-                role: 'user',
-                parts: [{ text: `${systemInstruction}\n\nUser Question: ${prompt}` }],
-              },
-            ],
-          }),
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (text) return text.trim();
-      }
-    } catch (e) {
-      console.error('Gemini API Error:', e);
     }
   }
 
