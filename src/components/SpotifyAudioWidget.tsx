@@ -68,6 +68,30 @@ const CURATED_PLAYLISTS: PlaylistOption[] = [
   },
 ];
 
+// PKCE helper functions for Spotify OAuth
+function generateRandomString(length: number): string {
+  let text = '';
+  const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  for (let i = 0; i < length; i++) {
+    text += possible.charAt(Math.floor(Math.random() * possible.length));
+  }
+  return text;
+}
+
+async function generateCodeChallenge(codeVerifier: string): Promise<string> {
+  const data = new TextEncoder().encode(codeVerifier);
+  const digest = await window.crypto.subtle.digest('SHA-256', data);
+  const bytes = new Uint8Array(digest);
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
 export const SpotifyAudioWidget: React.FC = () => {
   const [selectedPlaylist, setSelectedPlaylist] = useState<PlaylistOption>(CURATED_PLAYLISTS[0]);
   const [activeTab, setActiveTab] = useState<'spotify' | 'synthesizer'>('spotify');
@@ -84,16 +108,38 @@ export const SpotifyAudioWidget: React.FC = () => {
   const audioCtxRef = useRef<AudioContext | null>(null);
   const synthTimerRef = useRef<number | null>(null);
 
-  // Check URL hash for OAuth token redirect
+  // Check URL query parameters for PKCE authorization code redirect ?code=...
   useEffect(() => {
-    const hash = window.location.hash;
-    if (hash && hash.includes('access_token=')) {
-      const tokenMatch = hash.match(/access_token=([^&]*)/);
-      if (tokenMatch && tokenMatch[1]) {
-        const token = tokenMatch[1];
-        setSpotifyToken(token);
-        localStorage.setItem('spotify_access_token', token);
-        window.history.replaceState(null, '', window.location.pathname);
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+
+    if (code) {
+      const codeVerifier = localStorage.getItem('spotify_code_verifier');
+      const clientId = import.meta.env.VITE_SPOTIFY_CLIENT_ID || DEFAULT_SPOTIFY_CLIENT_ID;
+      const redirectUri = window.location.origin + window.location.pathname;
+
+      if (codeVerifier) {
+        fetch('https://accounts.spotify.com/api/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            client_id: clientId,
+            grant_type: 'authorization_code',
+            code: code,
+            redirect_uri: redirectUri,
+            code_verifier: codeVerifier,
+          }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.access_token) {
+              setSpotifyToken(data.access_token);
+              localStorage.setItem('spotify_access_token', data.access_token);
+              localStorage.removeItem('spotify_code_verifier');
+              window.history.replaceState(null, '', window.location.pathname);
+            }
+          })
+          .catch(() => {});
       }
     }
   }, []);
@@ -144,17 +190,27 @@ export const SpotifyAudioWidget: React.FC = () => {
       .catch(() => {});
   }, [spotifyToken]);
 
-  const handleConnectSpotify = () => {
+  const handleConnectSpotify = async () => {
     soundEngine.playTick();
     const clientId = import.meta.env.VITE_SPOTIFY_CLIENT_ID || DEFAULT_SPOTIFY_CLIENT_ID;
     const redirectUri = window.location.origin + window.location.pathname;
-    const scopes = ['user-read-private', 'user-read-email', 'playlist-read-private'].join('%20');
 
-    const authUrl = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=token&redirect_uri=${encodeURIComponent(
-      redirectUri
-    )}&scope=${scopes}&show_dialog=true`;
+    const verifier = generateRandomString(128);
+    const challenge = await generateCodeChallenge(verifier);
 
-    window.location.href = authUrl;
+    localStorage.setItem('spotify_code_verifier', verifier);
+
+    const params = new URLSearchParams({
+      client_id: clientId,
+      response_type: 'code',
+      redirect_uri: redirectUri,
+      scope: 'user-read-private user-read-email playlist-read-private',
+      code_challenge_method: 'S256',
+      code_challenge: challenge,
+      show_dialog: 'true',
+    });
+
+    window.location.href = `https://accounts.spotify.com/authorize?${params.toString()}`;
   };
 
   const handleDisconnectSpotify = () => {
@@ -163,6 +219,7 @@ export const SpotifyAudioWidget: React.FC = () => {
     setSpotifyProfile(null);
     setUserPlaylists([]);
     localStorage.removeItem('spotify_access_token');
+    localStorage.removeItem('spotify_code_verifier');
   };
 
   const startWebAudioBeat = () => {
