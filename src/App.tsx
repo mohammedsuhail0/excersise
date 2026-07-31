@@ -7,6 +7,7 @@ import { SpotifyAudioWidget } from './components/SpotifyAudioWidget';
 import { MacroScannerModal } from './components/MacroScannerModal';
 import { FeatureSettingsModal } from './components/FeatureSettingsModal';
 import { StepCounterModal } from './components/StepCounterModal';
+import { AICalisthenicsCoachModal } from './components/AICalisthenicsCoachModal';
 
 import { UserProfile, FeatureConfig, SetLog, CalisthenicsExercise, EquipmentMode, WorkoutRoutine } from './types';
 import { CALISTHENICS_SKILL_TREE, TARGET_MUSCLE_GROUPS } from './data/calisthenicsTree';
@@ -75,6 +76,7 @@ export function App() {
   const [activeTab, setActiveTab] = useState<'vibe' | 'workout' | 'music' | 'macro'>('vibe');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isStepCounterOpen, setIsStepCounterOpen] = useState(false);
+  const [isAICoachOpen, setIsAICoachOpen] = useState(false);
   const [selectedFormGuideExercise, setSelectedFormGuideExercise] = useState<CalisthenicsExercise | null>(null);
   const [themeMode, setThemeMode] = useState<'dark' | 'light'>('dark');
   const [bgIndex, setBgIndex] = useState(0);
@@ -296,6 +298,7 @@ export function App() {
               completedLevels={completedLevels}
               onToggleEquipment={() => setEquipmentMode((prev) => (prev === 'Home' ? 'Gym' : 'Home'))}
               onStartWorkout={handleStartPhaseWorkout}
+              onOpenAICoach={() => setIsAICoachOpen(true)}
             />
           )}
 
@@ -376,6 +379,13 @@ export function App() {
             </button>
           )}
         </nav>
+
+        {/* AI CALISTHENICS COACH SENSEI MODAL */}
+        <AICalisthenicsCoachModal
+          isOpen={isAICoachOpen}
+          onClose={() => setIsAICoachOpen(false)}
+          user={user}
+        />
 
         {/* PEDOMETER STEP COUNTER MODAL */}
         <StepCounterModal

@@ -87,17 +87,6 @@ export const ROUTINES_MAP: Record<VibeStage, WorkoutRoutine> = {
         recommendedReps: '8 reps / side',
         ghostPerformance: { lastReps: 8, lastWeightKg: 0, lastDate: '3 days ago' },
       },
-      {
-        id: 'r3',
-        name: 'Child\'s Pose Deep Breathing',
-        category: 'Decompression',
-        equipmentRequired: 'Home',
-        formGuide: DEFAULT_FORM_GUIDE,
-        targetMuscles: ['Lats', 'Lower Back'],
-        recommendedSets: 3,
-        recommendedReps: '60s hold',
-        ghostPerformance: { lastReps: 60, lastWeightKg: 0, lastDate: '3 days ago' },
-      },
     ],
   },
   'Steady Flow': {
@@ -107,44 +96,7 @@ export const ROUTINES_MAP: Record<VibeStage, WorkoutRoutine> = {
     description: 'Controlled tempo strength exercises for posture and stamina.',
     estimatedMins: 35,
     estimatedCalories: 240,
-    exercises: [
-      {
-        id: 's1',
-        name: 'Goblet Squat to Press',
-        category: 'Full Body',
-        equipmentRequired: 'Home',
-        formGuide: DEFAULT_FORM_GUIDE,
-        targetMuscles: ['Quads', 'Glutes', 'Shoulders'],
-        recommendedSets: 3,
-        recommendedReps: '12 reps',
-        suggestedWeightKg: 16,
-        ghostPerformance: { lastReps: 12, lastWeightKg: 14, lastDate: 'Last week' },
-      },
-      {
-        id: 's2',
-        name: 'Single-Arm Dumbbell Row',
-        category: 'Pull',
-        equipmentRequired: 'Home',
-        formGuide: DEFAULT_FORM_GUIDE,
-        targetMuscles: ['Lats', 'Upper Back'],
-        recommendedSets: 3,
-        recommendedReps: '12 reps / side',
-        suggestedWeightKg: 18,
-        ghostPerformance: { lastReps: 10, lastWeightKg: 18, lastDate: 'Last week' },
-      },
-      {
-        id: 's3',
-        name: 'Kettlebell Romanian Deadlift',
-        category: 'Posterior',
-        equipmentRequired: 'Home',
-        formGuide: DEFAULT_FORM_GUIDE,
-        targetMuscles: ['Hamstrings', 'Glutes'],
-        recommendedSets: 3,
-        recommendedReps: '12 reps',
-        suggestedWeightKg: 24,
-        ghostPerformance: { lastReps: 12, lastWeightKg: 20, lastDate: 'Last week' },
-      },
-    ],
+    exercises: [],
   },
   'High Energy': {
     id: 'high-01',
@@ -153,44 +105,7 @@ export const ROUTINES_MAP: Record<VibeStage, WorkoutRoutine> = {
     description: 'Moderate-to-heavy resistance targeting major muscle groups.',
     estimatedMins: 50,
     estimatedCalories: 420,
-    exercises: [
-      {
-        id: 'h1',
-        name: 'Incline Dumbbell Chest Press',
-        category: 'Push',
-        equipmentRequired: 'Home',
-        formGuide: DEFAULT_FORM_GUIDE,
-        targetMuscles: ['Upper Chest', 'Triceps'],
-        recommendedSets: 4,
-        recommendedReps: '10 reps',
-        suggestedWeightKg: 26,
-        ghostPerformance: { lastReps: 10, lastWeightKg: 24, lastDate: '4 days ago' },
-      },
-      {
-        id: 'h2',
-        name: 'Bulgarian Split Squat',
-        category: 'Legs',
-        equipmentRequired: 'Home',
-        formGuide: DEFAULT_FORM_GUIDE,
-        targetMuscles: ['Quads', 'Glutes'],
-        recommendedSets: 3,
-        recommendedReps: '10 reps / leg',
-        suggestedWeightKg: 16,
-        ghostPerformance: { lastReps: 8, lastWeightKg: 16, lastDate: '4 days ago' },
-      },
-      {
-        id: 'h3',
-        name: 'Lat Pulldown / Pull-ups',
-        category: 'Pull',
-        equipmentRequired: 'Home',
-        formGuide: DEFAULT_FORM_GUIDE,
-        targetMuscles: ['Lats', 'Biceps'],
-        recommendedSets: 4,
-        recommendedReps: '10 reps',
-        suggestedWeightKg: 65,
-        ghostPerformance: { lastReps: 10, lastWeightKg: 60, lastDate: '4 days ago' },
-      },
-    ],
+    exercises: [],
   },
   'Peak Power': {
     id: 'peak-01',
@@ -199,43 +114,52 @@ export const ROUTINES_MAP: Record<VibeStage, WorkoutRoutine> = {
     description: 'Heavy resistance training focusing on max neurological output.',
     estimatedMins: 60,
     estimatedCalories: 580,
-    exercises: [
-      {
-        id: 'p1',
-        name: 'Barbell Back Squat',
-        category: 'Legs',
-        equipmentRequired: 'Home',
-        formGuide: DEFAULT_FORM_GUIDE,
-        targetMuscles: ['Quads', 'Glutes', 'Core'],
-        recommendedSets: 5,
-        recommendedReps: '5 reps',
-        suggestedWeightKg: 100,
-        ghostPerformance: { lastReps: 5, lastWeightKg: 95, lastDate: '5 days ago' },
-      },
-      {
-        id: 'p2',
-        name: 'Barbell Flat Bench Press',
-        category: 'Push',
-        equipmentRequired: 'Home',
-        formGuide: DEFAULT_FORM_GUIDE,
-        targetMuscles: ['Chest', 'Triceps'],
-        recommendedSets: 5,
-        recommendedReps: '5 reps',
-        suggestedWeightKg: 85,
-        ghostPerformance: { lastReps: 5, lastWeightKg: 80, lastDate: '5 days ago' },
-      },
-      {
-        id: 'p3',
-        name: 'Conventional Barbell Deadlift',
-        category: 'Posterior',
-        equipmentRequired: 'Home',
-        formGuide: DEFAULT_FORM_GUIDE,
-        targetMuscles: ['Hamstrings', 'Lower Back'],
-        recommendedSets: 4,
-        recommendedReps: '5 reps',
-        suggestedWeightKg: 130,
-        ghostPerformance: { lastReps: 5, lastWeightKg: 125, lastDate: '5 days ago' },
-      },
-    ],
+    exercises: [],
   },
 };
+
+// MASTER AI CALISTHENICS COACH RESPONSE GENERATOR
+export function generateCoachResponse(prompt: string, userContext: any): string {
+  const lower = prompt.toLowerCase();
+  const userName = userContext.name || 'Athlete';
+  const weight = userContext.weightKg || 78;
+
+  if (lower.includes('wrist') || lower.includes('pain') || lower.includes('joint')) {
+    return `🔥 Hey ${userName}! Wrist pain during Pike Push-Ups or Planche leans is very common when wrist extensors aren't warm. Try this:
+1. Warm up with 10 wrist circles & palm pulses on the floor.
+2. Turn your hands slightly outward (at 45°) to relieve compression on the carpal tunnel.
+3. Keep your fingers spread wide and claw the floor to distribute your body weight evenly!`;
+  }
+
+  if (lower.includes('eat') || lower.includes('macro') || lower.includes('diet') || lower.includes('protein')) {
+    const targetProtein = Math.round(weight * 2); // 2g per kg
+    return `🥩 For your ${weight}kg target physique, your daily macronutrient baseline is:
+• Protein: ${targetProtein}g / day (Crucial for muscle recovery & low body fat)
+• Carbs: ~220g (Focus on rice, oats, sweet potatoes for training energy)
+• Healthy Fats: ~65g (Avocados, eggs, almonds)
+Pro Tip: Drink 3.5L of water daily to keep muscle bellies hydrated!`;
+  }
+
+  if (lower.includes('muscle-up') || lower.includes('muscle up')) {
+    return `⚡ The Muscle-Up is 80% speed & transition, not just pull-up strength!
+1. Build explosive power: Practice Chest-to-Bar Pull-Ups where your lower ribs touch the bar.
+2. The False Grip: Curl your wrists over the bar so your palm heel sits directly on top.
+3. Drive knees slightly forward as you pull high to sweep your chest over the bar!`;
+  }
+
+  if (lower.includes('planche') || lower.includes('tuck planche')) {
+    return `🤸 To unlock the Planche, straight-arm scapular protraction is key!
+1. Practice Tuck Planche holds: Aim for 5 sets of 12-15 seconds holds.
+2. Keep your arms locked 100% straight — do not bend at the elbows!
+3. Push your shoulder blades forward (protraction) and hollow your stomach. Move to Straddle Planche only when you can hold 15s comfortably!`;
+  }
+
+  if (lower.includes('handstand') || lower.includes('hspu')) {
+    return `🤸 For Handstand Push-Ups (HSPU):
+1. Lower down in a tripod position: Head goes slightly forward of your hands, forming a triangle.
+2. Keep your elbows tucked in at 45 degrees, never flare them out wide.
+3. Press upward through your shoulders while keeping your core & legs zipped tight!`;
+  }
+
+  return `💪 Great question, ${userName}! In pure calisthenics, progressive overload comes from altering body leverage and tempo, not just adding weight. Focus on 3-second slow negatives, full range of motion, and maintaining tight core tension in every single rep!`;
+}

@@ -10,11 +10,13 @@ interface CalisthenicsHomeProps {
   completedLevels: Record<string, number>;
   onToggleEquipment: () => void;
   onStartWorkout: (exercises: CalisthenicsExercise[], title: string) => void;
+  onOpenAICoach?: () => void;
 }
 
 export const TactileVibeSelector: React.FC<CalisthenicsHomeProps> = ({
   completedLevels,
   onStartWorkout,
+  onOpenAICoach,
 }) => {
   const [viewMode, setViewMode] = useState<'muscles' | 'skills'>('muscles');
   const [selectedId, setSelectedId] = useState<string>('chest-push');
@@ -76,7 +78,7 @@ export const TactileVibeSelector: React.FC<CalisthenicsHomeProps> = ({
 
   return (
     <div className="flex flex-col h-full justify-between select-none overflow-hidden space-y-2">
-      {/* 1. TOP HEADER WITH CLEAN MODE SWITCHER (EQUIPMENT BUTTON REMOVED FOR MAXIMUM SPACE) */}
+      {/* 1. TOP HEADER WITH CLEAN MODE SWITCHER */}
       <div className="space-y-1.5 shrink-0">
         <div className="flex items-center justify-between">
           {/* VIEW MODE TOGGLE (TARGET MUSCLES VS SKILLS) */}
@@ -225,11 +227,14 @@ export const TactileVibeSelector: React.FC<CalisthenicsHomeProps> = ({
         >
           <button
             type="button"
-            onClick={() => soundEngine.playTick()}
-            className="liquid-glass px-4 py-1 rounded-full inline-flex items-center space-x-1.5 text-[11px] font-semibold text-white/90 hover:text-white transition-colors cursor-pointer"
+            onClick={() => {
+              soundEngine.playTick();
+              onOpenAICoach?.();
+            }}
+            className="liquid-glass px-4 py-1 rounded-full inline-flex items-center space-x-1.5 text-[11px] font-semibold text-white/90 hover:text-white transition-colors cursor-pointer hover:border-orange-500/50"
           >
             <MessageSquare className="w-3.5 h-3.5 text-orange-400" />
-            <span>AI Calisthenics Coach (LLM Ready)</span>
+            <span>AI Calisthenics Sensei (LLM Ready)</span>
             <Sparkles className="w-3 h-3 text-amber-400" />
           </button>
         </div>
