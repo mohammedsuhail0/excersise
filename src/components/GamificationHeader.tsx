@@ -1,5 +1,5 @@
 import React from 'react';
-import { Flame, Shield, Sun, Moon, Image, Settings, Footprints } from 'lucide-react';
+import { Flame, Shield, Sun, Moon, Image, Settings, Footprints, Calculator } from 'lucide-react';
 import { UserProfile } from '../types';
 
 interface GamificationHeaderProps {
@@ -10,6 +10,7 @@ interface GamificationHeaderProps {
   onCycleBackground: () => void;
   onOpenSettings: () => void;
   onOpenStepCounter?: () => void;
+  onOpenMacroCalculator?: () => void;
 }
 
 export const GamificationHeader: React.FC<GamificationHeaderProps> = ({
@@ -20,6 +21,7 @@ export const GamificationHeader: React.FC<GamificationHeaderProps> = ({
   onCycleBackground,
   onOpenSettings,
   onOpenStepCounter,
+  onOpenMacroCalculator,
 }) => {
   return (
     <div className="w-full flex items-center justify-between gap-1 select-none animate-fade-up">
@@ -45,7 +47,7 @@ export const GamificationHeader: React.FC<GamificationHeaderProps> = ({
         </div>
       </div>
 
-      {/* RIGHT: COMPACT INLINE STAT BADGES (STREAK, SHIELD, PEDOMETER, THEME, BG, SETTINGS) */}
+      {/* RIGHT: COMPACT INLINE STAT BADGES */}
       <div className="flex items-center space-x-1 overflow-x-auto no-scrollbar">
         {/* STREAK DAYS */}
         <div className="liquid-glass rounded-full px-2 py-1 flex items-center space-x-1 text-[10px] font-bold text-white shrink-0">
@@ -53,11 +55,24 @@ export const GamificationHeader: React.FC<GamificationHeaderProps> = ({
           <span>{user.streakDays}d</span>
         </div>
 
+        {/* MACRO CALCULATOR PILL BUTTON */}
+        {onOpenMacroCalculator && (
+          <button
+            onClick={onOpenMacroCalculator}
+            className="liquid-glass-selected rounded-full px-2 py-1 flex items-center space-x-1 text-[10px] font-bold text-amber-400 border border-amber-500/30 hover:border-amber-500/60 shrink-0 transition-colors"
+            title="Open Macro & Calorie Calculator"
+          >
+            <Calculator className="w-3 h-3 text-amber-400" />
+            <span>Macros</span>
+          </button>
+        )}
+
         {/* PEDOMETER STEP COUNTER PILL BUTTON */}
         {onOpenStepCounter && (
           <button
             onClick={onOpenStepCounter}
             className="liquid-glass-selected rounded-full px-2 py-1 flex items-center space-x-1 text-[10px] font-bold text-orange-400 border border-orange-500/30 hover:border-orange-500/60 shrink-0 transition-colors"
+            title="Open Step Tracker"
           >
             <Footprints className="w-3 h-3 text-orange-400" />
             <span>{currentSteps > 9999 ? `${(currentSteps / 1000).toFixed(1)}k` : currentSteps.toLocaleString()}</span>

@@ -5,13 +5,14 @@ import { ExerciseFormGuideModal } from './components/ExerciseFormGuideModal';
 import { ActiveWorkoutMode } from './components/ActiveWorkoutMode';
 import { SpotifyAudioWidget } from './components/SpotifyAudioWidget';
 import { MacroScannerModal } from './components/MacroScannerModal';
+import { MacroCalculatorModal } from './components/MacroCalculatorModal';
 import { FeatureSettingsModal } from './components/FeatureSettingsModal';
 import { StepCounterModal } from './components/StepCounterModal';
 import { AICalisthenicsCoachModal } from './components/AICalisthenicsCoachModal';
 
 import { UserProfile, FeatureConfig, SetLog, CalisthenicsExercise, EquipmentMode, WorkoutRoutine } from './types';
-import { CALISTHENICS_SKILL_TREE, TARGET_MUSCLE_GROUPS } from './data/calisthenicsTree';
-import { Home, Dumbbell, Music, Utensils, Trophy, CheckCircle, Cloud } from 'lucide-react';
+import { TARGET_MUSCLE_GROUPS } from './data/calisthenicsTree';
+import { Home, Dumbbell, Music, Utensils, Trophy, CheckCircle } from 'lucide-react';
 import { soundEngine } from './services/soundEngine';
 import {
   isSupabaseConfigured,
@@ -76,6 +77,7 @@ export function App() {
   const [activeTab, setActiveTab] = useState<'vibe' | 'workout' | 'music' | 'macro'>('vibe');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isStepCounterOpen, setIsStepCounterOpen] = useState(false);
+  const [isMacroCalculatorOpen, setIsMacroCalculatorOpen] = useState(false);
   const [isAICoachOpen, setIsAICoachOpen] = useState(false);
   const [selectedFormGuideExercise, setSelectedFormGuideExercise] = useState<CalisthenicsExercise | null>(null);
   const [themeMode, setThemeMode] = useState<'dark' | 'light'>('dark');
@@ -285,6 +287,7 @@ export function App() {
               onCycleBackground={handleCycleBackground}
               onOpenSettings={() => setIsSettingsOpen(true)}
               onOpenStepCounter={() => setIsStepCounterOpen(true)}
+              onOpenMacroCalculator={() => setIsMacroCalculatorOpen(true)}
             />
           </div>
         )}
@@ -367,7 +370,7 @@ export function App() {
           {/* MACROS TAB */}
           {featureConfig.macroTracker && (
             <button
-              onClick={() => setActiveTab('macro')}
+              onClick={() => setIsMacroCalculatorOpen(true)}
               className={`flex flex-col items-center justify-center px-3 py-0.5 rounded-full transition-all ${
                 activeTab === 'macro'
                   ? 'text-orange-500 font-bold scale-105'
@@ -379,6 +382,13 @@ export function App() {
             </button>
           )}
         </nav>
+
+        {/* MACRO & CALORIE CALCULATOR MODAL */}
+        <MacroCalculatorModal
+          isOpen={isMacroCalculatorOpen}
+          onClose={() => setIsMacroCalculatorOpen(false)}
+          user={user}
+        />
 
         {/* AI CALISTHENICS COACH SENSEI MODAL */}
         <AICalisthenicsCoachModal
