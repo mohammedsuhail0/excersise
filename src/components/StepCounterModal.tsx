@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Footprints, Flame, MapPin, Clock, Award, X, Plus, Play, Pause, RotateCcw, Smartphone, Activity, Zap } from 'lucide-react';
+import { Footprints, Flame, MapPin, Clock, Award, X, Play, Pause, RotateCcw, Zap } from 'lucide-react';
 import { soundEngine } from '../services/soundEngine';
 
 interface StepCounterModalProps {
@@ -19,7 +19,6 @@ export const StepCounterModal: React.FC<StepCounterModalProps> = ({
 }) => {
   const [isLiveTracking, setIsLiveTracking] = useState(false);
   const [motionIntensity, setMotionIntensity] = useState<number>(0);
-  const [sensorStatus, setSensorStatus] = useState<string>('Ready to Calibrate');
 
   // Motion Detection State Refs
   const lastStepTimeRef = useRef<number>(0);
@@ -52,38 +51,27 @@ export const StepCounterModal: React.FC<StepCounterModalProps> = ({
       setMotionIntensity(Math.min(100, Math.round(delta * 15)));
 
       // 3. Calibrated Human Walking/Running Stride Detection:
-      // - Walking/Running stride delta threshold: delta >= 1.1 m/s² or mag >= 10.6 m/s²
-      // - Minimum time between steps: 280ms (allows fast running ~210 steps/min up to slow walking)
       if ((delta >= 1.1 || mag >= 10.6) && timeDelta >= 280) {
         lastStepTimeRef.current = now;
-        setSensorStatus('Step Detected! 👣');
         onUpdateSteps((prev) => prev + 1);
       }
     };
 
     if (isLiveTracking) {
-      setSensorStatus('Listening to Phone Motion...');
       if (typeof window !== 'undefined' && 'DeviceMotionEvent' in window) {
         if (typeof (DeviceMotionEvent as any).requestPermission === 'function') {
           (DeviceMotionEvent as any).requestPermission()
             .then((permissionState: string) => {
               if (permissionState === 'granted') {
                 window.addEventListener('devicemotion', handleDeviceMotion);
-              } else {
-                setSensorStatus('Motion Permission Denied');
               }
             })
-            .catch(() => {
-              setSensorStatus('Motion Permission Required');
-            });
+            .catch(() => {});
         } else {
           window.addEventListener('devicemotion', handleDeviceMotion);
         }
-      } else {
-        setSensorStatus('Motion Sensor Not Supported');
       }
     } else {
-      setSensorStatus('Sensor Paused');
       setMotionIntensity(0);
     }
 
@@ -95,11 +83,6 @@ export const StepCounterModal: React.FC<StepCounterModalProps> = ({
   }, [isLiveTracking, onUpdateSteps]);
 
   if (!isOpen) return null;
-
-  const handleAddSteps = (amount: number) => {
-    soundEngine.playTick();
-    onUpdateSteps(currentSteps + amount);
-  };
 
   const handleResetSteps = () => {
     soundEngine.playTick();
@@ -118,9 +101,7 @@ export const StepCounterModal: React.FC<StepCounterModalProps> = ({
             </div>
             <div>
               <h2 className="text-[16px] font-extrabold leading-tight">Pedometer Step Counter</h2>
-              <p className="text-[10px] text-orange-400 font-semibold flex items-center gap-1">
-                <Activity className="w-3 h-3 text-orange-400" /> {sensorStatus}
-              </p>
+              <p className="text-[10px] text-orange-400 font-semibold">Daily Active Walking Tracker</p>
             </div>
           </div>
 
@@ -222,39 +203,29 @@ export const StepCounterModal: React.FC<StepCounterModalProps> = ({
           </div>
         </div>
 
-        {/* CONTROLS & STEP SIMULATOR & RESET BUTTON */}
+        {/* CONTROLS & RESET BUTTON */}
         <div className="space-y-2 pt-2 border-t border-white/10">
           <div className="flex items-center space-x-2">
-            {/* LIVE TRACKING TOGGLE */}
+            {/* LIVE TRACKING TOGGLE BUTTON WITH CLEAN "START" / "PAUSE" */}
             <button
               onClick={() => {
                 soundEngine.playTick();
                 setIsLiveTracking((prev) => !prev);
               }}
-              className={`flex-1 py-2.5 rounded-full text-[11px] font-bold flex items-center justify-center space-x-1.5 transition-all ${
+              className={`flex-1 py-2.5 rounded-full text-[11px] font-extrabold flex items-center justify-center space-x-1.5 transition-all ${
                 isLiveTracking
                   ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md animate-pulse'
-                  : 'liquid-glass text-orange-400 border border-orange-500/30'
+                  : 'liquid-glass text-orange-400 border border-orange-500/30 hover:border-orange-500/60'
               }`}
             >
               {isLiveTracking ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-              <span>{isLiveTracking ? 'Motion Sensor Active' : 'Start Motion Sensor'}</span>
-            </button>
-
-            {/* MANUAL +500 STEPS */}
-            <button
-              onClick={() => handleAddSteps(500)}
-              className="liquid-glass px-3 py-2.5 rounded-full text-[11px] font-bold text-white hover:text-orange-400 flex items-center gap-1 shrink-0"
-              title="Add 500 Steps"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>+500</span>
+              <span>{isLiveTracking ? 'PAUSE' : 'START'}</span>
             </button>
 
             {/* RESET STEPS BUTTON WITH RESET ICON */}
             <button
               onClick={handleResetSteps}
-              className="px-3 py-2.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 text-[11px] font-bold flex items-center gap-1 shrink-0 transition-all active:scale-95"
+              className="px-4 py-2.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 text-[11px] font-bold flex items-center gap-1 shrink-0 transition-all active:scale-95"
               title="Reset Steps to 0"
             >
               <RotateCcw className="w-3.5 h-3.5 text-red-400" />
