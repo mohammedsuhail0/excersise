@@ -97,28 +97,21 @@ export const ROUTINES_MAP: Record<VibeStage, WorkoutRoutine> = {
 
 export type LLMProvider = 'nvidia' | 'groq' | 'gemini';
 
-// ULTRA-FAST & STRICT FITNESS GUARDRAILED LLM ENGINE
+// NATURAL HUMAN PERSONAL TRAINER LLM ENGINE
 export async function callMultiProviderLLMCoachAPI(
   prompt: string,
   userContext: any,
   provider: LLMProvider = 'nvidia',
   customApiKey?: string
 ): Promise<string> {
-  const lowerPrompt = prompt.toLowerCase();
+  const systemInstruction = `You are Sensei Goku, a real-life expert personal trainer and calisthenics coach. You talk naturally like a real human bro/coach to your athlete ${userContext.name || 'Goku'} (${userContext.weightKg || 78}kg, ${userContext.heightCm || 180}cm, ${userContext.targetPhysique || 'Anime Aesthetic'} goal).
 
-  // 1. INSTANT CLIENT-SIDE GUARDRAIL FOR CODING / NON-FITNESS REQUESTS
-  const offTopicKeywords = ['python', 'code', 'javascript', 'html', 'css', 'java', 'programming', 'script', 'function', 'math', 'equation', 'game', 'movie', 'song', 'essay', 'poem'];
-  if (offTopicKeywords.some((word) => lowerPrompt.includes(word))) {
-    return `OSS ${userContext.name || 'Athlete'}! 🥋 As your Calisthenics Coach, I strictly focus on workouts, bodyweight skill progressions, form cues, and sports nutrition. Let us get back to training! 💪`;
-  }
+Your Personality & Tone:
+- Talk like a real, passionate, natural human personal trainer. Be direct, encouraging, energetic, and authentic.
+- NEVER sound like a robotic customer service bot or AI assistant. NEVER say "As an AI..." or "As your Calisthenics Coach, I strictly focus on...".
+- If your athlete asks something off-topic (like coding, math, or random stuff), respond naturally in character like a real gym bro/trainer would (e.g., "Bro, I build chest and shoulders, I don't write code! Drop and give me 20 pushups instead 😜").
+- Give practical, high-impact, natural fitness and nutrition advice. Keep responses under 110 words, direct, engaging, and motivating!`;
 
-  const systemInstruction = `You are Sensei Goku, a Master Calisthenics Coach. You talk directly to the athlete:
-- Athlete: ${userContext.name || 'Goku'} (${userContext.weightKg || 78}kg, ${userContext.heightCm || 180}cm, ${userContext.targetPhysique || 'Anime Aesthetic'} target).
-
-CRITICAL RULE: You are STRICTLY a Calisthenics, Fitness, & Sports Nutrition Coach. If the user asks about ANYTHING else (coding, Python, math, movies, tech), politely refuse and refocus on workouts.
-Answer fitness questions concisely in under 90 words with bullet points and emojis. Be fast, direct, and motivating!`;
-
-  // 2. ULTRA-FAST NVIDIA NIM INFERENCE (MAX 180 TOKENS FOR SPEED)
   if (provider === 'nvidia') {
     const apiKey = customApiKey || import.meta.env.VITE_NVIDIA_API_KEY || '';
     if (!apiKey) {
@@ -139,7 +132,7 @@ Answer fitness questions concisely in under 90 words with bullet points and emoj
       for (const model of modelsToTry) {
         try {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 3500); // 3.5s speed timeout
+          const timeoutId = setTimeout(() => controller.abort(), 4000);
 
           const response = await fetch(endpoint, {
             method: 'POST',
@@ -154,8 +147,8 @@ Answer fitness questions concisely in under 90 words with bullet points and emoj
                 { role: 'system', content: systemInstruction },
                 { role: 'user', content: prompt },
               ],
-              temperature: 0.5,
-              max_tokens: 180, // Reduced tokens for ultra-fast generation speed
+              temperature: 0.7, // Warm, creative, natural human temperature
+              max_tokens: 220,
             }),
           });
           clearTimeout(timeoutId);
@@ -166,7 +159,7 @@ Answer fitness questions concisely in under 90 words with bullet points and emoj
             if (text) return text.trim();
           }
         } catch (e) {
-          // Timeout or fetch error -> try next or fallback fast
+          // Timeout or fetch error -> try next
         }
       }
     }
@@ -181,33 +174,17 @@ function generateDynamicSmartFallback(prompt: string, userContext: any): string 
   const weight = userContext.weightKg || 78;
 
   if (lower.includes('wrist') || lower.includes('pain') || lower.includes('elbow')) {
-    return `🔥 Hey ${name}! Joint/wrist discomfort during pushing exercises happens when forearms aren't pre-warmed.
-• Turn hands outward 45° to open carpal space.
-• Perform 10 palm pulses and wrist waves.
-• Spread fingers wide and claw into the ground to absorb force evenly!`;
+    return `Hey ${name}! Wrist pain on pushing moves means forearms need pre-warming. Turn your hands out 45°, do 10 palm pulses, and claw into the ground! 🔥`;
   }
 
   if (lower.includes('eat') || lower.includes('diet') || lower.includes('food') || lower.includes('protein') || lower.includes('calories')) {
     const protein = Math.round(weight * 2);
-    return `🥩 For your ${weight}kg target:
-• Daily Protein Goal: ${protein}g (Egg whites, chicken breast, Greek yogurt).
-• Carbs: ~220g for workout energy (Oats, rice, bananas).
-• Hydration: Drink 3.5L of water daily to maximize muscle pump!`;
+    return `Bro, for your ${weight}kg physique goal, aim for ${protein}g protein daily (eggs, chicken, Greek yogurt) plus 220g clean carbs. Keep water at 3.5L! 🥩`;
   }
 
-  if (lower.includes('muscle-up') || lower.includes('muscle up')) {
-    return `⚡ The Muscle-Up relies on explosive pull height:
-• Pull the bar down to your lower ribs, not just your chin.
-• Use the False Grip (wrist resting over the bar).
-• Whip your chest over the bar at the apex of the pull!`;
+  if (lower.includes('python') || lower.includes('code') || lower.includes('script')) {
+    return `Bro, I build chest and shoulders, I don't write Python code! Drop and give me 20 clean pushups instead 😜💪`;
   }
 
-  if (lower.includes('planche')) {
-    return `🤸 For Planche mastery:
-• Lock elbows 100% straight — no bending!
-• Protracted shoulders (push shoulder blades away from each other).
-• Hold Tuck Planche for 5 sets of 12s before advancing!`;
-  }
-
-  return `💪 OSS ${name}! To progress in calisthenics, focus on progressive leverage (shifting body weight further forward), strict 3-0-1 tempo, and full range of motion. What calisthenics move or nutrition goal are we tackling today?`;
+  return `Hey ${name}! Focus on progressive leverage, controlled 3-second negatives, and tight core tension. What are we blasting today? 💪`;
 }
