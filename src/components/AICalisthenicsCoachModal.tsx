@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Send, Sparkles, Bot, User, Flame, Dumbbell, Zap, Key, Cpu } from 'lucide-react';
+import { X, Send, Sparkles, Bot, User, Flame, Dumbbell, Zap } from 'lucide-react';
 import { UserProfile } from '../types';
-import { callMultiProviderLLMCoachAPI, LLMProvider } from '../services/aiEngine';
+import { callMultiProviderLLMCoachAPI } from '../services/aiEngine';
 import { soundEngine } from '../services/soundEngine';
 
 interface AICalisthenicsCoachModalProps {
@@ -22,18 +22,15 @@ export const AICalisthenicsCoachModal: React.FC<AICalisthenicsCoachModalProps> =
   onClose,
   user,
 }) => {
-  const [provider, setProvider] = useState<LLMProvider>('nvidia');
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
       sender: 'coach',
-      text: `OSS ${user.name}! I am your AI Calisthenics Sensei powered by NVIDIA NIM (Llama 3.1 70B). Ask me ANY question!`,
+      text: `OSS ${user.name}! I am your AI Calisthenics Coach. Ask me ANY question about workouts, form cues, or diet!`,
       time: 'Just now',
     },
   ]);
   const [inputText, setInputText] = useState('');
-  const [apiKeyInput, setApiKeyInput] = useState(() => localStorage.getItem('aurafit_nvidia_api_key') || '');
-  const [showKeyInput, setShowKeyInput] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -42,12 +39,6 @@ export const AICalisthenicsCoachModal: React.FC<AICalisthenicsCoachModalProps> =
   }, [messages, isTyping]);
 
   if (!isOpen) return null;
-
-  const handleSaveApiKey = (key: string) => {
-    setApiKeyInput(key);
-    localStorage.setItem('aurafit_nvidia_api_key', key);
-    setShowKeyInput(false);
-  };
 
   const handleSendMessage = async (textToSend?: string) => {
     const text = textToSend || inputText;
@@ -66,7 +57,8 @@ export const AICalisthenicsCoachModal: React.FC<AICalisthenicsCoachModalProps> =
     setIsTyping(true);
 
     try {
-      const replyText = await callMultiProviderLLMCoachAPI(text, user, provider, apiKeyInput);
+      // Calls NVIDIA NIM in background seamlessly without displaying tech names
+      const replyText = await callMultiProviderLLMCoachAPI(text, user, 'nvidia');
       soundEngine.playSetCompleteChime();
       const coachMsg: Message = {
         id: `msg-${Date.now() + 1}`,
@@ -90,109 +82,28 @@ export const AICalisthenicsCoachModal: React.FC<AICalisthenicsCoachModalProps> =
     <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 animate-fade-up">
       <div className="w-full max-w-sm h-[90vh] max-h-[620px] bg-[#0f1420]/95 border border-orange-500/40 rounded-[32px] flex flex-col justify-between overflow-hidden shadow-2xl relative text-white">
         
-        {/* MODAL HEADER WITH PROVIDER SWITCHER */}
-        <div className="p-3 border-b border-white/10 flex items-center justify-between bg-black/40 backdrop-blur-md shrink-0">
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center text-white shadow-md border border-white/20">
-              <Bot className="w-4 h-4" />
+        {/* CLEAN MINIMALIST HEADER (NO MODEL NAMES OR KEY SYMBOLS) */}
+        <div className="p-3.5 border-b border-white/10 flex items-center justify-between bg-black/40 backdrop-blur-md shrink-0">
+          <div className="flex items-center space-x-2.5">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center text-white shadow-md border border-white/20">
+              <Bot className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center space-x-1">
-                <h2 className="text-[14px] font-extrabold leading-tight">AI Calisthenics Sensei</h2>
+                <h2 className="text-[15px] font-extrabold leading-tight">AI Calisthenics Coach</h2>
                 <Sparkles className="w-3.5 h-3.5 text-amber-400" />
               </div>
-              <p className="text-[9px] text-emerald-400 font-semibold uppercase tracking-wider">
-                {provider === 'nvidia' ? '🟢 NVIDIA NIM Llama 3.1 70B' : provider === 'groq' ? '⚡ Groq Llama 3.3 70B' : '✨ Gemini 1.5 Flash'}
-              </p>
+              <p className="text-[9.5px] text-orange-400 font-semibold">Master Personal Trainer Active</p>
             </div>
           </div>
 
-          <div className="flex items-center space-x-1">
-            <button
-              onClick={() => setShowKeyInput((prev) => !prev)}
-              className="w-7 h-7 rounded-full liquid-glass flex items-center justify-center text-amber-400 hover:text-white"
-              title="Set LLM API Key"
-            >
-              <Key className="w-3.5 h-3.5" />
-            </button>
-
-            <button
-              onClick={onClose}
-              className="w-7 h-7 rounded-full liquid-glass flex items-center justify-center text-white/70 hover:text-white"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
+          <button
+            onClick={onClose}
+            className="w-7 h-7 rounded-full liquid-glass flex items-center justify-center text-white/70 hover:text-white"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
-
-        {/* PROVIDER TOGGLE STRIP */}
-        <div className="px-3 py-1.5 bg-black/60 border-b border-white/10 flex items-center justify-between text-[10px] shrink-0">
-          <span className="text-white/60 font-bold flex items-center gap-1">
-            <Cpu className="w-3 h-3 text-orange-400" /> Engine:
-          </span>
-          <div className="flex items-center space-x-1">
-            <button
-              onClick={() => {
-                soundEngine.playTick();
-                setProvider('nvidia');
-              }}
-              className={`px-2 py-0.5 rounded-full font-bold transition-colors ${
-                provider === 'nvidia' ? 'bg-emerald-500 text-white' : 'text-white/60 hover:text-white'
-              }`}
-            >
-              🟢 NVIDIA
-            </button>
-            <button
-              onClick={() => {
-                soundEngine.playTick();
-                setProvider('groq');
-              }}
-              className={`px-2 py-0.5 rounded-full font-bold transition-colors ${
-                provider === 'groq' ? 'bg-orange-500 text-white' : 'text-white/60 hover:text-white'
-              }`}
-            >
-              ⚡ Groq
-            </button>
-            <button
-              onClick={() => {
-                soundEngine.playTick();
-                setProvider('gemini');
-              }}
-              className={`px-2 py-0.5 rounded-full font-bold transition-colors ${
-                provider === 'gemini' ? 'bg-amber-500 text-white' : 'text-white/60 hover:text-white'
-              }`}
-            >
-              ✨ Gemini
-            </button>
-          </div>
-        </div>
-
-        {/* OPTIONAL LLM API KEY INPUT BAR */}
-        {showKeyInput && (
-          <div className="p-2.5 bg-black/80 border-b border-white/10 text-[11px] space-y-1.5 shrink-0">
-            <div className="flex items-center justify-between">
-              <span className="text-amber-400 font-bold">
-                {provider.toUpperCase()} API Key:
-              </span>
-              <span className="text-[9px] text-white/50">Optional Override</span>
-            </div>
-            <div className="flex gap-1">
-              <input
-                type="password"
-                value={apiKeyInput}
-                onChange={(e) => handleSaveApiKey(e.target.value)}
-                placeholder={`Paste your ${provider.toUpperCase()} API key (nvapi-...)...`}
-                className="flex-1 bg-white/10 border border-white/20 rounded-full px-3 py-1 text-[11px] outline-none text-white placeholder:text-white/40"
-              />
-              <button
-                onClick={() => setShowKeyInput(false)}
-                className="px-3 py-1 bg-orange-500 rounded-full text-[10px] font-bold text-white"
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* MESSAGES VIEWPORT */}
         <div className="flex-1 overflow-y-auto p-3 space-y-3 no-scrollbar min-h-0">
@@ -232,7 +143,7 @@ export const AICalisthenicsCoachModal: React.FC<AICalisthenicsCoachModalProps> =
                 <Bot className="w-3.5 h-3.5" />
               </div>
               <div className="liquid-glass px-3 py-2 rounded-[18px] text-[11px] text-orange-400 flex items-center space-x-1.5 animate-pulse">
-                <span>NVIDIA NIM (Llama 3.1 70B) is generating answer...</span>
+                <span>Coach is analyzing...</span>
               </div>
             </div>
           )}
@@ -274,7 +185,7 @@ export const AICalisthenicsCoachModal: React.FC<AICalisthenicsCoachModalProps> =
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-              placeholder={`Ask NVIDIA NIM (Llama 3.1 70B)...`}
+              placeholder="Ask Coach about calisthenics form or diet..."
               className="flex-1 bg-transparent text-white text-[12px] outline-none placeholder:text-white/40"
             />
             <button
