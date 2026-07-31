@@ -10,8 +10,15 @@ import { StepCounterModal } from './components/StepCounterModal';
 
 import { UserProfile, FeatureConfig, SetLog, CalisthenicsExercise, EquipmentMode, WorkoutRoutine } from './types';
 import { CALISTHENICS_SKILL_TREE, TARGET_MUSCLE_GROUPS } from './data/calisthenicsTree';
-import { Home, Dumbbell, Music, Utensils, Trophy, CheckCircle } from 'lucide-react';
+import { Home, Dumbbell, Music, Utensils, Trophy, CheckCircle, Cloud } from 'lucide-react';
 import { soundEngine } from './services/soundEngine';
+import {
+  isSupabaseConfigured,
+  syncUserProfileToSupabase,
+  syncCompletedLevelToSupabase,
+  logWorkoutToSupabase,
+  syncStepsToSupabase,
+} from './services/supabaseClient';
 
 const BACKGROUND_OPTIONS = {
   dark: [
@@ -71,6 +78,7 @@ export function App() {
   const [selectedFormGuideExercise, setSelectedFormGuideExercise] = useState<CalisthenicsExercise | null>(null);
   const [themeMode, setThemeMode] = useState<'dark' | 'light'>('dark');
   const [bgIndex, setBgIndex] = useState(0);
+
   const [showVictoryModal, setShowVictoryModal] = useState(false);
   const [victoryDetails, setVictoryDetails] = useState<{ title: string; nextPhaseTitle: string; xpEarned: number }>({
     title: 'Chest & Push Session',
@@ -114,9 +122,12 @@ export function App() {
     gamification: true,
   });
 
-  // Persist State
+  // Persist State Locally & Sync with Supabase
   useEffect(() => {
     localStorage.setItem('aurafit_user', JSON.stringify(user));
+    if (isSupabaseConfigured) {
+      syncUserProfileToSupabase('guest-user-id', user);
+    }
   }, [user]);
 
   useEffect(() => {
@@ -125,6 +136,11 @@ export function App() {
 
   useEffect(() => {
     localStorage.setItem('aurafit_daily_steps', currentSteps.toString());
+    if (isSupabaseConfigured) {
+      const distanceKm = parseFloat((currentSteps * 0.00075).toFixed(2));
+      const caloriesBurned = Math.round(currentSteps * 0.04);
+      syncStepsToSupabase('guest-user-id', currentSteps, distanceKm, caloriesBurned);
+    }
   }, [currentSteps]);
 
   const handleToggleFeature = (key: keyof FeatureConfig) => {
@@ -196,6 +212,11 @@ export function App() {
       [targetKey]: nextLvl,
     }));
 
+    if (isSupabaseConfigured) {
+      syncCompletedLevelToSupabase('guest-user-id', targetKey, nextLvl);
+      logWorkoutToSupabase('guest-user-id', activePhaseRoutine.title, activePhaseRoutine.estimatedMins, activePhaseRoutine.estimatedCalories, 150);
+    }
+
     setUser((prev) => {
       const newXp = prev.xp + 150;
       let newLevel = prev.level;
@@ -251,7 +272,7 @@ export function App() {
           }`}
         />
 
-        {/* TOP HEADER WITH STEP COUNTER INTEGRATION */}
+        {/* TOP HEADER */}
         {featureConfig.gamification && (
           <div className="relative z-10 shrink-0">
             <GamificationHeader
@@ -388,7 +409,7 @@ export function App() {
               <div className="liquid-glass rounded-[20px] p-3 border border-orange-500/30 text-left space-y-1">
                 <div className="flex items-center space-x-1.5 text-orange-400 font-bold text-[11px]">
                   <CheckCircle className="w-3.5 h-3.5" />
-                  <span>Phase Progress Saved!</span>
+                  <span>Phase Progress Saved & Synced!</span>
                 </div>
                 <p className="text-[11px] text-white/80 leading-snug">
                   {victoryDetails.nextPhaseTitle} You have leveled up!
