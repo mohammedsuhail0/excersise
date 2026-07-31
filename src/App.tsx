@@ -287,7 +287,6 @@ export function App() {
               onCycleBackground={handleCycleBackground}
               onOpenSettings={() => setIsSettingsOpen(true)}
               onOpenStepCounter={() => setIsStepCounterOpen(true)}
-              onOpenMacroCalculator={() => setIsMacroCalculatorOpen(true)}
             />
           </div>
         )}
