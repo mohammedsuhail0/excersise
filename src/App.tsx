@@ -1,0 +1,426 @@
+import React, { useState, useEffect } from 'react';
+import { GamificationHeader } from './components/GamificationHeader';
+import { TactileVibeSelector } from './components/TactileVibeSelector';
+import { ExerciseFormGuideModal } from './components/ExerciseFormGuideModal';
+import { ActiveWorkoutMode } from './components/ActiveWorkoutMode';
+import { SpotifyAudioWidget } from './components/SpotifyAudioWidget';
+import { MacroScannerModal } from './components/MacroScannerModal';
+import { FeatureSettingsModal } from './components/FeatureSettingsModal';
+import { StepCounterModal } from './components/StepCounterModal';
+
+import { UserProfile, FeatureConfig, SetLog, CalisthenicsExercise, EquipmentMode, WorkoutRoutine } from './types';
+import { CALISTHENICS_SKILL_TREE, TARGET_MUSCLE_GROUPS } from './data/calisthenicsTree';
+import { Home, Dumbbell, Music, Utensils, Trophy, CheckCircle } from 'lucide-react';
+import { soundEngine } from './services/soundEngine';
+
+const BACKGROUND_OPTIONS = {
+  dark: [
+    {
+      id: 'dark-gym-1',
+      name: 'Moody Dark Gym',
+      url: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=1400&q=85',
+    },
+    {
+      id: 'dark-gym-2',
+      name: 'Obsidian Athletics',
+      url: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1400&q=85',
+    },
+    {
+      id: 'dark-gym-3',
+      name: 'Cyber Fitness Glow',
+      url: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?auto=format&fit=crop&w=1400&q=85',
+    },
+  ],
+  light: [
+    {
+      id: 'light-gym-1',
+      name: 'Clean Minimalist Studio',
+      url: 'https://images.unsplash.com/photo-1540497077202-7c8a3999166f?auto=format&fit=crop&w=1400&q=85',
+    },
+    {
+      id: 'light-gym-2',
+      name: 'Bright Athletic Space',
+      url: 'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=1400&q=85',
+    },
+  ],
+};
+
+export function App() {
+  const [user, setUser] = useState<UserProfile>(() => {
+    const saved = localStorage.getItem('aurafit_user');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return {
+      name: 'Goku',
+      heightCm: 180,
+      weightKg: 78,
+      targetPhysique: 'Anime Aesthetic',
+      level: 5,
+      xp: 320,
+      maxXp: 500,
+      streakDays: 12,
+      streakShields: 2,
+    };
+  });
+
+  const [equipmentMode, setEquipmentMode] = useState<EquipmentMode>('Home');
+  const [activeTab, setActiveTab] = useState<'vibe' | 'workout' | 'music' | 'macro'>('vibe');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isStepCounterOpen, setIsStepCounterOpen] = useState(false);
+  const [selectedFormGuideExercise, setSelectedFormGuideExercise] = useState<CalisthenicsExercise | null>(null);
+  const [themeMode, setThemeMode] = useState<'dark' | 'light'>('dark');
+  const [bgIndex, setBgIndex] = useState(0);
+  const [showVictoryModal, setShowVictoryModal] = useState(false);
+  const [victoryDetails, setVictoryDetails] = useState<{ title: string; nextPhaseTitle: string; xpEarned: number }>({
+    title: 'Chest & Push Session',
+    nextPhaseTitle: 'Phase 2: Intermediate Variations Unlocked!',
+    xpEarned: 150,
+  });
+
+  // Pedometer Step Tracker State
+  const [currentSteps, setCurrentSteps] = useState<number>(() => {
+    const saved = localStorage.getItem('aurafit_daily_steps');
+    return saved ? parseInt(saved, 10) || 6420 : 6420;
+  });
+  const stepGoal = 10000;
+
+  // Track completed targets & unlocked tiers in state & localStorage
+  const [completedLevels, setCompletedLevels] = useState<Record<string, number>>(() => {
+    const saved = localStorage.getItem('aurafit_completed_levels');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return { 'chest-push': 1, 'abs-core': 1, 'legs-glutes': 1, 'back-pull': 1, 'muscle-up': 1 };
+  });
+
+  // Active Phase Workout Routine
+  const [activePhaseRoutine, setActivePhaseRoutine] = useState<WorkoutRoutine>({
+    id: 'calisthenics-p1',
+    vibeStage: 'High Energy',
+    title: 'CHEST & PUSH (Phase 1)',
+    description: 'Decline & Pike Push-Ups, Dips & Diamond Press',
+    estimatedMins: 30,
+    estimatedCalories: 260,
+    exercises: TARGET_MUSCLE_GROUPS[0].exercises,
+  });
+
+  const [featureConfig, setFeatureConfig] = useState<FeatureConfig>({
+    skillTree: true,
+    vibeSelector: true,
+    workoutTracker: true,
+    musicDeck: true,
+    macroTracker: true,
+    gamification: true,
+  });
+
+  // Persist State
+  useEffect(() => {
+    localStorage.setItem('aurafit_user', JSON.stringify(user));
+  }, [user]);
+
+  useEffect(() => {
+    localStorage.setItem('aurafit_completed_levels', JSON.stringify(completedLevels));
+  }, [completedLevels]);
+
+  useEffect(() => {
+    localStorage.setItem('aurafit_daily_steps', currentSteps.toString());
+  }, [currentSteps]);
+
+  const handleToggleFeature = (key: keyof FeatureConfig) => {
+    const updated = { ...featureConfig, [key]: !featureConfig[key] };
+    setFeatureConfig(updated);
+    localStorage.setItem('aurafit_feature_config', JSON.stringify(updated));
+  };
+
+  const handleToggleTheme = () => {
+    soundEngine.playTick();
+    setThemeMode((prev) => (prev === 'dark' ? 'light' : 'dark'));
+    setBgIndex(0);
+  };
+
+  const bgList = BACKGROUND_OPTIONS[themeMode];
+  const currentBg = bgList[bgIndex % bgList.length];
+
+  const handleCycleBackground = () => {
+    soundEngine.playTick();
+    setBgIndex((prev) => (prev + 1) % bgList.length);
+  };
+
+  const handleStartPhaseWorkout = (exercises: CalisthenicsExercise[], phaseTitle: string) => {
+    setActivePhaseRoutine({
+      id: `session-${Date.now()}`,
+      vibeStage: 'High Energy',
+      title: phaseTitle,
+      description: `Tailored Session for ${user.name}`,
+      estimatedMins: 35,
+      estimatedCalories: 300,
+      exercises: exercises,
+    });
+    setActiveTab('workout');
+  };
+
+  const handleLogSet = (_setLog: SetLog) => {
+    setUser((prev) => {
+      const newXp = prev.xp + 25;
+      if (newXp >= prev.maxXp) {
+        return {
+          ...prev,
+          level: prev.level + 1,
+          xp: newXp - prev.maxXp,
+          maxXp: prev.maxXp + 100,
+        };
+      }
+      return { ...prev, xp: newXp };
+    });
+  };
+
+  const handleFinishWorkout = () => {
+    soundEngine.playSetCompleteChime();
+    
+    const targetKey = activePhaseRoutine.title.toLowerCase().includes('chest')
+      ? 'chest-push'
+      : activePhaseRoutine.title.toLowerCase().includes('abs')
+      ? 'abs-core'
+      : activePhaseRoutine.title.toLowerCase().includes('leg')
+      ? 'legs-glutes'
+      : activePhaseRoutine.title.toLowerCase().includes('back')
+      ? 'back-pull'
+      : 'muscle-up';
+
+    const currentLvl = completedLevels[targetKey] || 1;
+    const nextLvl = currentLvl + 1;
+
+    setCompletedLevels((prev) => ({
+      ...prev,
+      [targetKey]: nextLvl,
+    }));
+
+    setUser((prev) => {
+      const newXp = prev.xp + 150;
+      let newLevel = prev.level;
+      let newMaxXp = prev.maxXp;
+      let remainingXp = newXp;
+
+      if (remainingXp >= prev.maxXp) {
+        newLevel += 1;
+        remainingXp -= prev.maxXp;
+        newMaxXp += 100;
+      }
+
+      return {
+        ...prev,
+        level: newLevel,
+        xp: remainingXp,
+        maxXp: newMaxXp,
+        streakDays: prev.streakDays + 1,
+      };
+    });
+
+    setVictoryDetails({
+      title: activePhaseRoutine.title,
+      nextPhaseTitle: `Phase ${nextLvl}: Advanced Tier Unlocked!`,
+      xpEarned: 150,
+    });
+
+    setShowVictoryModal(true);
+  };
+
+  const handleCloseVictory = () => {
+    setShowVictoryModal(false);
+    setActiveTab('vibe');
+  };
+
+  return (
+    <div className={`h-screen h-[100dvh] w-full flex justify-center overflow-hidden selection:bg-none ${themeMode === 'light' ? 'light-mode bg-slate-100 text-slate-900' : 'bg-[#07090e] text-white'}`}>
+      {/* NATIVE MOBILE CONTAINER LOCKED TO 100vh ZERO SCROLL */}
+      <div className={`w-full max-w-md h-screen h-[100dvh] flex flex-col justify-between relative overflow-hidden transition-colors duration-300 p-3 ${themeMode === 'light' ? 'bg-slate-200' : 'bg-[#0b0f19]'}`}>
+        
+        {/* ATHLETIC BACKGROUND IMAGE */}
+        <div
+          className="absolute inset-0 bg-center bg-cover bg-no-repeat blur-[10px] scale-[1.1] pointer-events-none transition-all duration-700"
+          style={{ backgroundImage: `url('${currentBg.url}')` }}
+        />
+
+        {/* OVERLAY */}
+        <div
+          className={`absolute inset-0 pointer-events-none z-[1] transition-all duration-500 ${
+            themeMode === 'light'
+              ? 'bg-gradient-to-b from-white/80 via-white/65 to-slate-100/90'
+              : 'bg-gradient-to-b from-black/75 via-black/60 to-black/85'
+          }`}
+        />
+
+        {/* TOP HEADER WITH STEP COUNTER INTEGRATION */}
+        {featureConfig.gamification && (
+          <div className="relative z-10 shrink-0">
+            <GamificationHeader
+              user={user}
+              currentSteps={currentSteps}
+              themeMode={themeMode}
+              onToggleTheme={handleToggleTheme}
+              onCycleBackground={handleCycleBackground}
+              onOpenSettings={() => setIsSettingsOpen(true)}
+              onOpenStepCounter={() => setIsStepCounterOpen(true)}
+            />
+          </div>
+        )}
+
+        {/* MAIN VIEWPORT CONTENT */}
+        <main className="flex-1 flex flex-col justify-between overflow-hidden relative z-10 my-1 min-h-0">
+          {activeTab === 'vibe' && (
+            <TactileVibeSelector
+              user={user}
+              equipmentMode={equipmentMode}
+              completedLevels={completedLevels}
+              onToggleEquipment={() => setEquipmentMode((prev) => (prev === 'Home' ? 'Gym' : 'Home'))}
+              onStartWorkout={handleStartPhaseWorkout}
+            />
+          )}
+
+          {activeTab === 'workout' && (
+            <ActiveWorkoutMode
+              routine={activePhaseRoutine}
+              onLogSet={handleLogSet}
+              onFinishWorkout={handleFinishWorkout}
+              onBackToSkills={() => setActiveTab('vibe')}
+              onOpenFormGuide={(exercise) => setSelectedFormGuideExercise(exercise)}
+            />
+          )}
+
+          {activeTab === 'music' && featureConfig.musicDeck && (
+            <SpotifyAudioWidget />
+          )}
+
+          {activeTab === 'macro' && featureConfig.macroTracker && (
+            <MacroScannerModal />
+          )}
+        </main>
+
+        {/* LIQUID GLASS BOTTOM NAVIGATION DOCK */}
+        <nav className="w-full h-[46px] rounded-full liquid-glass flex items-center justify-around px-2 relative z-50 shrink-0 mt-1">
+          {/* HOME TAB */}
+          <button
+            onClick={() => setActiveTab('vibe')}
+            className={`flex flex-col items-center justify-center px-3 py-0.5 rounded-full transition-all ${
+              activeTab === 'vibe'
+                ? 'text-orange-500 font-bold scale-105'
+                : themeMode === 'light' ? 'text-slate-600 hover:text-slate-900' : 'text-white/60 hover:text-white'
+            }`}
+          >
+            <Home className="w-4 h-4 mb-0.5" />
+            <span className="text-[9px] tracking-tight">Home</span>
+          </button>
+
+          {/* WORKOUT TAB */}
+          <button
+            onClick={() => setActiveTab('workout')}
+            className={`flex flex-col items-center justify-center px-3 py-0.5 rounded-full transition-all ${
+              activeTab === 'workout'
+                ? 'text-orange-500 font-bold scale-105'
+                : themeMode === 'light' ? 'text-slate-600 hover:text-slate-900' : 'text-white/60 hover:text-white'
+            }`}
+          >
+            <Dumbbell className="w-4 h-4 mb-0.5" />
+            <span className="text-[9px] tracking-tight">Workout</span>
+          </button>
+
+          {/* AUDIO TAB */}
+          {featureConfig.musicDeck && (
+            <button
+              onClick={() => setActiveTab('music')}
+              className={`flex flex-col items-center justify-center px-3 py-0.5 rounded-full transition-all ${
+                activeTab === 'music'
+                  ? 'text-orange-500 font-bold scale-105'
+                  : themeMode === 'light' ? 'text-slate-600 hover:text-slate-900' : 'text-white/60 hover:text-white'
+              }`}
+            >
+              <Music className="w-4 h-4 mb-0.5" />
+              <span className="text-[9px] tracking-tight">Audio</span>
+            </button>
+          )}
+
+          {/* MACROS TAB */}
+          {featureConfig.macroTracker && (
+            <button
+              onClick={() => setActiveTab('macro')}
+              className={`flex flex-col items-center justify-center px-3 py-0.5 rounded-full transition-all ${
+                activeTab === 'macro'
+                  ? 'text-orange-500 font-bold scale-105'
+                  : themeMode === 'light' ? 'text-slate-600 hover:text-slate-900' : 'text-white/60 hover:text-white'
+              }`}
+            >
+              <Utensils className="w-4 h-4 mb-0.5" />
+              <span className="text-[9px] tracking-tight">Macros</span>
+            </button>
+          )}
+        </nav>
+
+        {/* PEDOMETER STEP COUNTER MODAL */}
+        <StepCounterModal
+          isOpen={isStepCounterOpen}
+          onClose={() => setIsStepCounterOpen(false)}
+          currentSteps={currentSteps}
+          stepGoal={stepGoal}
+          onUpdateSteps={(newSteps) => setCurrentSteps(newSteps)}
+        />
+
+        {/* WORKOUT VICTORY UNLOCK MODAL */}
+        {showVictoryModal && (
+          <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-fade-up">
+            <div className="w-full max-w-sm bg-[#0f1420] border border-orange-500/40 rounded-[32px] p-5 text-center space-y-4 shadow-2xl text-white">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center mx-auto shadow-lg shadow-orange-500/30 animate-bounce">
+                <Trophy className="w-8 h-8 text-white" />
+              </div>
+
+              <div>
+                <span className="text-[10px] font-bold text-orange-400 uppercase tracking-widest block">
+                  Session Completed!
+                </span>
+                <h2 className="text-[20px] font-extrabold text-white leading-tight mt-0.5">
+                  {victoryDetails.title}
+                </h2>
+                <p className="text-[12px] text-amber-400 font-semibold mt-1">
+                  +{victoryDetails.xpEarned} XP Earned! Streak +1 Day 🔥
+                </p>
+              </div>
+
+              <div className="liquid-glass rounded-[20px] p-3 border border-orange-500/30 text-left space-y-1">
+                <div className="flex items-center space-x-1.5 text-orange-400 font-bold text-[11px]">
+                  <CheckCircle className="w-3.5 h-3.5" />
+                  <span>Phase Progress Saved!</span>
+                </div>
+                <p className="text-[11px] text-white/80 leading-snug">
+                  {victoryDetails.nextPhaseTitle} You have leveled up!
+                </p>
+              </div>
+
+              <button
+                onClick={handleCloseVictory}
+                className="w-full py-3 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-white font-extrabold text-[13px] shadow-lg shadow-orange-500/30 hover:scale-[1.02] active:scale-95 transition-all"
+              >
+                Claim XP & Return Home
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* In-App Exercise Form Guide Modal */}
+        <ExerciseFormGuideModal
+          exercise={selectedFormGuideExercise}
+          onClose={() => setSelectedFormGuideExercise(null)}
+        />
+
+        {/* Feature Settings Modal */}
+        <FeatureSettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          config={featureConfig}
+          onToggleFeature={handleToggleFeature}
+        />
+      </div>
+    </div>
+  );
+}
+
+export default App;
